@@ -4,14 +4,23 @@
 ###################################################################################################
 # 1) Reference to terraform binary
 ###################################################################################################
-ARG TerraformVersion=latest
+ARG TerraformVersion
 FROM hashicorp/terraform:$TerraformVersion as tf-requirements
+
+###################################################################################################
+# 2) Building the tfmigrate binary
+###################################################################################################
+FROM golang:1.19-alpine3.15
+RUN apk update && apk add --no-cache bash git make
+
+# Copying compiled executables from tf-requirements
+COPY --from=tf-requirements /bin/terraform /usr/local/bin/
 RUN git clone https://github.com/minamijoyo/tfmigrate
 RUN cd tfmigrate/
 RUN make install
 
 ###################################################################################################
-# 2) Building the src code
+# 2) Building the github action logic
 ###################################################################################################
 FROM golang:1.19-alpine3.15
 RUN apk update && apk add --no-cache bash git make

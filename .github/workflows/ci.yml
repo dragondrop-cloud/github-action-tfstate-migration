@@ -32,8 +32,9 @@ jobs:
         uses: actions/setup-go@v3
         with:
           go-version-file: '.go-version'
+          cache: true
 
       - name: Run linter
         uses: golangci/golangci-lint-action@v3
         with:
-          version: "latest"
+          version: v1.48
