@@ -7,9 +7,8 @@ jobs:
     timeout-minutes: 3
 
     env:
-      IsApply: false
-      WorkspaceDirectories: ""
-      TerraformVersion: "1.2.6"
+      ISAPPLY: false
+      WORKSPACEDIRECTORIES: ""
 
     steps:
       - name: Checkout branch
@@ -17,7 +16,7 @@ jobs:
 
       - name: Build and Run Container
         run: |
-          docker build -t test-build --file=Dockerfile .
+          docker build --build-arg TERRAFORM_VERSION=1.2.6 -t test-build --file=Dockerfile .
           docker run test-build
 
   golangci-lint:

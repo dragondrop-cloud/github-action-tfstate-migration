@@ -9,11 +9,16 @@ import (
 
 // MigrateAllWorkspaces runs migrations for all workspaces by coordinating calls to MigrateWorkspace.
 func (sm *stateMigrator) MigrateAllWorkspaces() error {
-	for workspace := range sm.config.WorkspaceDirectories {
+	for _, workspace := range sm.config.WorkspaceDirectories {
+		if workspace == "null" {
+			continue
+		}
+
 		err := sm.MigrateWorkspace(Workspace(workspace))
 		if err != nil {
-			return fmt.Errorf("[sm.MigrateWorkspace] Error migrating %v workspace", workspace)
+			return fmt.Errorf("[sm.MigrateWorkspace] Error migrating %v workspace: %v", workspace, err)
 		}
+
 	}
 
 	return nil
@@ -27,7 +32,8 @@ func (sm *stateMigrator) MigrateWorkspace(w Workspace) error {
 		return fmt.Errorf("[os.Chdir] %v", err)
 	}
 
-	// TODO: Can pull this into a helper function, otherwise everything is an integration test.
+	// TODO: Can pull this into a helper function at some point and unit test it,
+	// TODO: otherwise everything is an integration test.
 	var tfMigrateCMD string
 
 	if sm.config.IsApply {

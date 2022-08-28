@@ -25,10 +25,11 @@ inputs:
 runs:
   using: "docker"
   image: "Dockerfile"
+  build-args:
+    TERRAFORM_VERSION: { { inputs.terraform-version } }
   env:
     AWSAccessKeyID: {{ inputs.aws-access-key-id }}
     AWSSecretAccessKey: {{ inputs.aws-secret-access-key }}
     GoogleApplicationCredentials: {{ inputs.google-application-credentials }}
     IsApply: {{ inputs.is-apply }}
-    TerraformVersion: {{ inputs.terraform-version }}
     WorkspaceDirectories: {{ inputs.workspace-directories }}
