@@ -31,7 +31,7 @@ jobs:
       - name: Install golang
         uses: actions/setup-go@v3
         with:
-          go-version-file: 'github-action-tfstate-migration/.go-version'
+          go-version-file: '.go-version'
 
       - name: Run linter
         uses: golangci/golangci-lint-action@v3

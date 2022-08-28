@@ -4,7 +4,7 @@
 ###################################################################################################
 # 1) Reference to terraform binary
 ###################################################################################################
-FROM hashicorp/terraform:$terraform_version as tf-requirements
+FROM hashicorp/terraform:$TerraformVersion as tf-requirements
 RUN git clone https://github.com/minamijoyo/tfmigrate
 RUN cd tfmigrate/
 RUN make install
