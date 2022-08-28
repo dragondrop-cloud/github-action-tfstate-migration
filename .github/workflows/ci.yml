@@ -9,6 +9,7 @@ jobs:
     env:
       IsApply: false
       WorkspaceDirectories: ""
+      TerraformVersion: "1.2.6"
 
     steps:
       - name: Checkout branch
@@ -35,5 +36,4 @@ jobs:
       - name: Run linter
         uses: golangci/golangci-lint-action@v3
         with:
-          working-directory: github-action-tfstate-migration
           version: v1.46.2
