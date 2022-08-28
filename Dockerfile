@@ -22,15 +22,14 @@ WORKDIR /tfmigrate
 
 RUN go mod download
 RUN make install
-#RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-#    go build -ldflags='-w -s -extldflags "-static"' -a \
-#    -o /go/bin/tfmigrate -v .
 
 ###################################################################################################
 # 3) Building the github action logic
 ###################################################################################################
 FROM golang:1.19-alpine3.15
 RUN apk update && apk add --no-cache bash git make
+
+ENV ISAPPLY=$ISAPPLY WORKSPACEDIRECTORIES=$WORKSPACEDIRECTORIES
 
 # Copying compiled executables from tf-requirements
 COPY --from=tf /bin/terraform /usr/local/bin/

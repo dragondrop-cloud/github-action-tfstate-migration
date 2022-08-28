@@ -6,17 +6,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 3
 
-    env:
-      ISAPPLY: false
-      WORKSPACEDIRECTORIES: ""
-
     steps:
       - name: Checkout branch
         uses: actions/checkout@v3
 
       - name: Build and Run Container
         run: |
-          docker build --build-arg TERRAFORM_VERSION=1.2.6 -t test-build --file=Dockerfile .
+          docker build --build-arg TERRAFORM_VERSION=1.2.6 ISAPPLY=false WORKSPACEDIRECTORIES=null -t test-build --file=Dockerfile .
           docker run test-build
 
   golangci-lint:
