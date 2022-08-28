@@ -4,6 +4,7 @@
 ###################################################################################################
 # 1) Reference to terraform binary
 ###################################################################################################
+ARG TerraformVersion=latest
 FROM hashicorp/terraform:$TerraformVersion as tf-requirements
 RUN git clone https://github.com/minamijoyo/tfmigrate
 RUN cd tfmigrate/

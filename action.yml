@@ -18,7 +18,7 @@ inputs:
   terraform-version:
     description: "Version of terraform to use for running the statemigration."
     required: true
-    default: "1.2.6"
+    default: "latest"
   workspace-directories:
     description: "List of relative paths to workspace directories with statemigration to perform."
     required: true
