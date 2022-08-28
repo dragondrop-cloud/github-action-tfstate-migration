@@ -4,17 +4,17 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/dragondrop-cloud/github-action-tfstate-migration/statemigrator"
+	"github.com/dragondrop-cloud/github-action-tfstate-migration/statemigration"
 )
 
 func main() {
-	config, err := statemigrator.NewConfig()
+	config, err := statemigration.NewConfig()
 	if err != nil {
 		fmt.Printf("error loading action configuration: %v", err)
 		os.Exit(1)
 	}
 
-	stateMigrator := statemigrator.NewStateMigrator(config)
+	stateMigrator := statemigration.NewStateMigrator(config)
 
 	err = stateMigrator.MigrateAllWorkspaces()
 

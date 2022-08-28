@@ -21,7 +21,7 @@ Defaults to `"false"`.
 ### `terraform-version`
 **Required** The Terraform version to use within the job.
 
-Defaults to `"1.2.6"`
+Defaults to `"latest"`
 
 ### `workspace-directories`
 **Required** A list of relative directory paths within the repo,

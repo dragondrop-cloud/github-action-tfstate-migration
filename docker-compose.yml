@@ -1,0 +1,11 @@
+version: "3.8"
+
+services:
+  tfstate-migration:
+    build:
+      context: .
+      args:
+        TERRAFORM_VERSION: "1.2.4"
+    environment:
+      - "ISAPPLY=false"
+      - "WORKSPACEDIRECTORIES=null"
