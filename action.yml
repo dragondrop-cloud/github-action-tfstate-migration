@@ -1,0 +1,38 @@
+name: "Dragondrop TFState Migration"
+description: "Plan or Apply State Migrations"
+inputs:
+  # TODO: TF Cloud authentication
+  aws-access-key-id:
+    description: "AWS_ACCESS_KEY_ID that has read/write permissions to the s3 bucket where tfmigrate histories are stored."
+    required: false
+    default: "null"
+  aws-secret-access-key:
+    description: "AWS_SECRET_ACCESS_KEY that has read/write permissions to the s3 bucket where tfmigrate histories are stored."
+    required: false
+    default: "null"
+  google-application-credentials:
+    description: "GOOGLE_APPLICATION_CREDENTIALS that have that has read/write permissions to the GCS bucket where tfmigrate histories are stored."
+    required: false
+    default: "null"
+  is-apply:
+    description: "Boolean representing whether the job should run statemigration or just check to see if they are valid."
+    required: true
+    default: "false"
+  terraform-version:
+    description: "Version of terraform to use for running the statemigration."
+    required: true
+    default: "1.2.6"
+  workspace-directories:
+    description: "List of relative paths to workspace directories with statemigration to perform."
+    required: true
+    default: "[]"
+runs:
+  using: "docker"
+  image: "Dockerfile"
+  env:
+    AWS_ACCESS_KEY_ID: {{ inputs.aws-access-key-id }}
+    AWS_SECRET_ACCESS_KEY: {{ inputs.aws-secret-access-key }}
+    GOOGLE_APPLICATION_CREDENTIALS: {{ inputs.google-application-credentials }}
+    is-apply: {{ inputs.is-apply }}
+    terraform-version: {{ inputs.terraform-version }}
+    workspace-directories: {{ inputs.workspace-directories }}
