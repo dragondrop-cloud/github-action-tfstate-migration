@@ -1,0 +1,35 @@
+name: continuous integration (CI)
+on: push
+
+jobs:
+  build-run-action:
+    runs-on: ubuntu-latest
+
+    timeout-minutes: 3
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v3
+
+      - name: Build and Run Container
+        run: |
+          docker build -t test-build --file=Dockerfile .
+          docker run test-build
+
+  golangci-lint:
+    runs-on: ubuntu-latest
+
+    timeout-minutes: 3
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v3
+
+      - name: Install golang
+        uses: actions/setup-go@v3
+        with:
+          go-version-file: 'github-action-tfstate-migration/.go-version'
+
+      - name: Run linter
+        uses: golangci/golangci-lint-action@v3
+        with:
+          working-directory: github-action-tfstate-migration
+          version: v1.46.2
