@@ -32,8 +32,19 @@ func (sm *stateMigrator) MigrateWorkspace(w Workspace) error {
 		return fmt.Errorf("[os.Chdir] %v", err)
 	}
 
-	// TODO: Can pull this into a helper function at some point and unit test it,
-	// TODO: otherwise everything is an integration test.
+	tfMigrateArgs := sm.BuildTFMigrateArgs()
+
+	err = executeCommand("tfmigrate", tfMigrateArgs...)
+	if err != nil {
+		return fmt.Errorf("[executeCommand] %v", err)
+	}
+
+	return nil
+}
+
+// BuildTFMigrateArgs constructs a slice of strings for use within
+// a tfmigrate command
+func (sm *stateMigrator) BuildTFMigrateArgs() []string {
 	var tfMigrateCMD string
 
 	if sm.config.IsApply {
@@ -42,14 +53,9 @@ func (sm *stateMigrator) MigrateWorkspace(w Workspace) error {
 		tfMigrateCMD = "plan"
 	}
 
-	tfmigrateArgs := []string{tfMigrateCMD}
+	tfMigrateArgs := []string{tfMigrateCMD}
 
-	err = executeCommand("tfmigrate", tfmigrateArgs...)
-	if err != nil {
-		return fmt.Errorf("[executeCommand] %v", err)
-	}
-
-	return nil
+	return tfMigrateArgs
 }
 
 // executeCommand wraps os.exec.Command with capturing of std output and errors.
