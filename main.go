@@ -8,16 +8,19 @@ import (
 )
 
 func main() {
-
-	config := statemigrator.NewConfig()
+	config, err := statemigrator.NewConfig()
+	if err != nil {
+		fmt.Printf("error loading action configuration: %v", err)
+		os.Exit(1)
+	}
 
 	stateMigrator := statemigrator.NewStateMigrator(config)
 
-	err := stateMigrator.MigrateAllWorkspaces()
+	err = stateMigrator.MigrateAllWorkspaces()
 
 	if err != nil {
 		fmt.Printf("error migrating all workspace's state: %v", err)
 		os.Exit(1)
 	}
-	fmt.Println("Successfully ran tf-state-migration job.")
+	fmt.Println("Successfully ran tfstate-migration job.")
 }
