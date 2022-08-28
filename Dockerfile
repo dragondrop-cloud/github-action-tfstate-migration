@@ -29,8 +29,6 @@ RUN make install
 FROM golang:1.19-alpine3.15
 RUN apk update && apk add --no-cache bash git make
 
-ENV ISAPPLY=$ISAPPLY WORKSPACEDIRECTORIES=$WORKSPACEDIRECTORIES
-
 # Copying compiled executables from tf-requirements
 COPY --from=tf /bin/terraform /usr/local/bin/
 COPY --from=tfm go/bin/tfmigrate /usr/local/bin/
@@ -44,5 +42,11 @@ RUN go mod download
 COPY . .
 
 RUN go install
+
+ARG IS_APPLY
+ENV ISAPPLY=$IS_APPLY
+
+ARG WORKSPACE_DIRECTORIES
+ENV WORKSPACEDIRECTORIES=$WORKSPACE_DIRECTORIES
 
 ENTRYPOINT ["/go/bin/github-action-tfstate-migration"]
