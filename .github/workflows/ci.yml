@@ -4,8 +4,12 @@ on: push
 jobs:
   build-run-action:
     runs-on: ubuntu-latest
-
     timeout-minutes: 3
+
+    env:
+      IsApply: false
+      WorkspaceDirectories: ""
+
     steps:
       - name: Checkout branch
         uses: actions/checkout@v3
