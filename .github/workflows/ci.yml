@@ -12,7 +12,7 @@ jobs:
 
       - name: Build and Run Container
         run: |
-          docker build --build-arg TERRAFORM_VERSION=1.2.6 ISAPPLY=false WORKSPACEDIRECTORIES=null -t test-build --file=Dockerfile .
+          docker build --build-arg TERRAFORM_VERSION=1.2.6 --build-arg ISAPPLY=false --build-arg WORKSPACEDIRECTORIES=null -t test-build --file=Dockerfile .
           docker run test-build
 
   golangci-lint:
