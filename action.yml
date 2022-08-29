@@ -1,4 +1,7 @@
 name: "Dragondrop TFState Migration"
+branding:
+  icon: cloud
+  color: red
 description: "Plan or Apply State Migrations"
 inputs:
   # TODO: TF Cloud authentication -- Need to figure this out quickly
