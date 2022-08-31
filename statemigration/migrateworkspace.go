@@ -29,9 +29,9 @@ func (sm *stateMigrator) MigrateWorkspace(w Workspace) error {
 	// TODO: Debugging statement
 	cwd, _ := os.Getwd()
 
-	err := os.Chdir(cwd + string(w))
+	err := os.Chdir(string(w))
 	if err != nil {
-		return fmt.Errorf("[os.Chdir] %v", err)
+		return fmt.Errorf("[os.Chdir] %v %v", cwd, err)
 	}
 
 	tfMigrateArgs := sm.BuildTFMigrateArgs()
