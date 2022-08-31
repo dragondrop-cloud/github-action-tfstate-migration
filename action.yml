@@ -29,9 +29,9 @@ runs:
   using: "docker"
   image: "Dockerfile"
   env:
-    TERRAFORM_VERSION: { { inputs.terraform-version } }
-    AWSAccessKeyID: {{ inputs.aws-access-key-id }}
-    AWSSecretAccessKey: {{ inputs.aws-secret-access-key }}
-    GoogleApplicationCredentials: {{ inputs.google-application-credentials }}
-    ISAPPLY: {{ inputs.is-apply }}
-    WORKSPACEDIRECTORIES: {{ inputs.workspace-directories }}
+    TERRAFORM_VERSION: ${{ inputs.terraform-version } }
+    AWSAccessKeyID: ${{ inputs.aws-access-key-id }}
+    AWSSecretAccessKey: ${{ inputs.aws-secret-access-key }}
+    GoogleApplicationCredentials: ${{ inputs.google-application-credentials }}
+    ISAPPLY: ${{ inputs.is-apply }}
+    WORKSPACEDIRECTORIES: ${{ inputs.workspace-directories }}
