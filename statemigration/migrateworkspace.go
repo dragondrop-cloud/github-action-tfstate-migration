@@ -26,8 +26,10 @@ func (sm *stateMigrator) MigrateAllWorkspaces() error {
 
 // MigrateWorkspace runs migrations for the workspace specified.
 func (sm *stateMigrator) MigrateWorkspace(w Workspace) error {
-	err := os.Chdir(string(w))
+	// TODO: Debugging statement
+	cwd, _ := os.Getwd()
 
+	err := os.Chdir(cwd + string(w))
 	if err != nil {
 		return fmt.Errorf("[os.Chdir] %v", err)
 	}
