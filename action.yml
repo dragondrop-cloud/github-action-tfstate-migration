@@ -29,7 +29,7 @@ runs:
   using: "docker"
   image: "Dockerfile"
   env:
-    TERRAFORM_VERSION: ${{ inputs.terraform-version } }
+    TERRAFORM_VERSION: ${{ inputs.terraform-version }}
     AWSAccessKeyID: ${{ inputs.aws-access-key-id }}
     AWSSecretAccessKey: ${{ inputs.aws-secret-access-key }}
     GoogleApplicationCredentials: ${{ inputs.google-application-credentials }}
