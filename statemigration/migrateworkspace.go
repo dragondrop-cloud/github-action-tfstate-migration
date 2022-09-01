@@ -31,6 +31,7 @@ func (sm *stateMigrator) MigrateWorkspace(w Workspace) error {
 		return fmt.Errorf("[os.Chdir] %v", err)
 	}
 
+	fmt.Printf("Running migrations for: %v", w)
 	tfMigrateArgs := sm.BuildTFMigrateArgs()
 
 	err = executeCommand("tfmigrate", tfMigrateArgs...)
