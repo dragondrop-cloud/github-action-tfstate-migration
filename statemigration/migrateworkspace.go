@@ -39,12 +39,10 @@ func (sm *stateMigrator) MigrateWorkspace(w Workspace) error {
 	}
 
 	fmt.Printf("Running migrations for: %v", w)
-	//tfMigrateArgs := sm.BuildTFMigrateArgs()
-	// TODO: Why is there no standard output? Either a path bug or some
-	// TODO: limitation of tfmigrate and standard output generation. Guessing
-	// TODO: that it is the later, but need to confirm.
-	err = executeCommand("tfmigrate", []string{"--help"}...)
-	//err = executeCommand("tfmigrate", tfMigrateArgs...)
+
+	tfMigrateArgs := sm.BuildTFMigrateArgs()
+	err = executeCommand("tfmigrate", tfMigrateArgs...)
+
 	if err != nil {
 		return fmt.Errorf("[executeCommand `tfmigrate`] %v", err)
 	}
@@ -83,6 +81,6 @@ func executeCommand(command string, args ...string) error {
 	if err != nil {
 		return fmt.Errorf("%v\n\n%v", err, stderr.String()+out.String())
 	}
-	fmt.Printf("\n`%s` output:\n\n%v\n", command+args[0], out.String())
+	fmt.Printf("\n`%s %s` output:\n\n%v\n", command, args, out.String())
 	return nil
 }
