@@ -4,9 +4,6 @@ branding:
   color: red
 description: "Plan or Apply State Migrations"
 inputs:
-  # TODO: TF Cloud authentication -- Need to figure this out quickly
-  # TODO: Possible that these parameters should all just be specified
-  # TODO: AWS/GCP variables.
   is-apply:
     description: "Boolean representing whether the job should run statemigration or just check to see if they are valid."
     required: true
