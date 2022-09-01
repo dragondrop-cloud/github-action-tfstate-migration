@@ -26,12 +26,9 @@ func (sm *stateMigrator) MigrateAllWorkspaces() error {
 
 // MigrateWorkspace runs migrations for the workspace specified.
 func (sm *stateMigrator) MigrateWorkspace(w Workspace) error {
-	// TODO: Debugging statement
-	cwd, _ := os.Getwd()
-
-	err := os.Chdir(string(w))
+	err := os.Chdir(fmt.Sprintf("/github/workspace%v", string(w)))
 	if err != nil {
-		return fmt.Errorf("[os.Chdir] %v %v", cwd, err)
+		return fmt.Errorf("[os.Chdir] %v", err)
 	}
 
 	tfMigrateArgs := sm.BuildTFMigrateArgs()
@@ -55,7 +52,7 @@ func (sm *stateMigrator) BuildTFMigrateArgs() []string {
 		tfMigrateCMD = "plan"
 	}
 
-	tfMigrateArgs := []string{tfMigrateCMD}
+	tfMigrateArgs := []string{tfMigrateCMD, "--config=./dragondrop/tfmigrate/.tfmigrate.hcl"}
 
 	return tfMigrateArgs
 }
