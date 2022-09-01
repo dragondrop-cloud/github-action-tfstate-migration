@@ -31,12 +31,19 @@ func (sm *stateMigrator) MigrateWorkspace(w Workspace) error {
 		return fmt.Errorf("[os.Chdir] %v", err)
 	}
 
+	terraformInitArgs := []string{"init"}
+	err = executeCommand("terraform", terraformInitArgs...)
+
+	if err != nil {
+		return fmt.Errorf("[executeCommand `terraform init`] %v", err)
+	}
+
 	fmt.Printf("Running migrations for: %v", w)
 	tfMigrateArgs := sm.BuildTFMigrateArgs()
 
 	err = executeCommand("tfmigrate", tfMigrateArgs...)
 	if err != nil {
-		return fmt.Errorf("[executeCommand] %v", err)
+		return fmt.Errorf("[executeCommand `tfmigrate`] %v", err)
 	}
 
 	return nil
