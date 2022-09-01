@@ -35,16 +35,5 @@ func NewConfig() (*Config, error) {
 		return nil, fmt.Errorf("[envconfig.Process] Error loading config: %v", err)
 	}
 
-	// Setting AWS environment variables
-	//err = os.Setenv("AWS_ACCESS_KEY_ID", c.AWSAccessKeyID)
-	//if err != nil {
-	//	return nil, fmt.Errorf("[os.Setenv] Error setting AWS_ACCESS_KEY_ID value: %v", err)
-	//}
-	//
-	//err = os.Setenv("AWS_SECRET_ACCESS_KEY", c.AWSSecretAccessKey)
-	//if err != nil {
-	//	return nil, fmt.Errorf("[os.Setenv] Error setting AWS_SECRET_ACCESS_KEY value: %v", err)
-	//}
-
 	return &c, err
 }
