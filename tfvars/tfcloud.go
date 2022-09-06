@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 
 	"github.com/Jeffail/gabs/v2"
 )
@@ -19,13 +20,18 @@ type tfCloud struct {
 	httpClient http.Client
 }
 
-// PullAllWorkspaceVariables extracts variables for all workspaces and saves them into
+// CreateAllWorkspaceVarsFiles extracts variables for all workspaces and saves them into
 // .tfvars files within the appropriate directory.
-func (tfc *tfCloud) PullAllWorkspaceVariables() error {
+func (tfc *tfCloud) CreateAllWorkspaceVarsFiles() error {
 	ctx := context.Background()
 
+	workspaceToVarSetVars, err := tfc.getVarSetVarsByWorkspace()
+	if err != nil {
+		return fmt.Errorf("[tfc.getVarSetVarsByWorkspace] %v", err)
+	}
+
 	for workspace, _ := range tfc.config.WorkspaceToDirectory {
-		err := tfc.PullWorkspaceVariables(ctx, workspace)
+		err := tfc.PullWorkspaceVariables(ctx, workspace, workspaceToVarSetVars)
 		if err != nil {
 			return fmt.Errorf(
 				"[tfc.PullWorkspaceVariables] Error in workspace %v: %v",
@@ -37,32 +43,186 @@ func (tfc *tfCloud) PullAllWorkspaceVariables() error {
 	return nil
 }
 
+// TODO: Implement
+// getVarSetVarsByWorkspace produces a map between a workspace name and variables associated
+// with that workspace from variable sets.
+func (tfc *tfCloud) getVarSetVarsByWorkspace() (map[string]VariableMap, error) {
+	varsetIDs, workspaceToVarSetID, err := tfc.getVarSetIdsForOrg()
+	if err != nil {
+		return nil, fmt.Errorf("[tfc.getVarSetIdsForOrg] %v", err)
+	}
+
+	workspaceToVarSetVars, err := tfc.getVarSetVars(varsetIDs, workspaceToVarSetID)
+	if err != nil {
+		return nil, fmt.Errorf("[tfc.getVarSetVars] %v", err)
+	}
+
+	return workspaceToVarSetVars, nil
+}
+
+// TODO: Implement and unit test
+func (tfc *tfCloud) getVarSetIdsForOrg() ([]string, map[string]string, error) {
+	// GET organizations/:organization_name/varsets
+	return nil, nil, nil
+}
+
+// GET varsets/:varset_id/relationships/vars
+// TODO: Implement and unit test
+func (tfc *tfCloud) getVarSetVars(varSetIDs []string, workspaceToVarSetID map[string]string) (map[string]VariableMap, error) {
+	workspaceToVarSetVars := map[string]VariableMap{}
+
+	for varSetID := range varSetIDs {
+		requestPath := fmt.Sprintf("https://app.terraform.io/api/v2/varsets/%v/relationships/vars", varSetID)
+
+		httpRequest, err := tfc.buildTFCloudHTTPRequest(
+			context.Background(),
+			"getVarSetVars",
+			"GET",
+			requestPath,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("[tfc.buildTFCloudHTTPRequest] %v", err)
+		}
+
+		response, err := tfc.terraformCloudRequest(httpRequest, "getVarSetVars")
+		if err != nil {
+			return nil, fmt.Errorf("[tfc.buildTFCloudHTTPRequest] %v", err)
+		}
+
+		workspaceToVarSetVars, err = tfc.extractWorkspaceVars(response, workspaceToVarSetID, workspaceToVarSetVars)
+		if err != nil {
+			return nil, fmt.Errorf("[tfc.extractWorkspaceVars] %v", err)
+		}
+
+	}
+	return nil, nil
+}
+
+// TODO: Implement and unit test
+// extractWorkspaceVars extracts workspace variables from the current variable set's variables.
+func (tfc *tfCloud) extractWorkspaceVars(
+	varSetVarsResponse []byte,
+	workspaceToVarSetID map[string]string,
+	workspaceToVarSetVars map[string]VariableMap,
+) (map[string]VariableMap, error) {
+
+	return nil, nil
+}
+
 // PullWorkspaceVariables extracts variables for a single workspace saves into a .tfvars
 // file within the appropriate directory.
-func (tfc *tfCloud) PullWorkspaceVariables(ctx context.Context, workspaceName string) error {
-	varContainer, err := tfc.DownloadWorkspaceVariables(ctx, workspaceName)
+func (tfc *tfCloud) PullWorkspaceVariables(
+	ctx context.Context,
+	workspaceName string,
+	workspaceToVarSetVars map[string]VariableMap,
+) error {
+	workspaceVarsContainer, err := tfc.DownloadWorkspaceVariables(ctx, workspaceName)
 	if err != nil {
 		return fmt.Errorf("[tfc.DownloadWorkspaceVariables] %v", err)
 	}
-	// TODO: parse out variables into a reasonable format for .tfvars
 
-	// TODO: Save out that file into the appropriate directory.
+	workspaceVarsMap, err := tfc.parseWorkspaceVars(workspaceVarsContainer)
+	if err != nil {
+		return fmt.Errorf("[tfc.parseWorkspaceVars] %v", err)
+	}
+
+	tfVarsFile, err := tfc.generateTFVarsFile(workspaceVarsMap, workspaceToVarSetVars)
+	if err != nil {
+		return fmt.Errorf("[tfc.generateTFVarsFile] %v", err)
+	}
+
+	err = os.WriteFile("terraform.tfvars", tfVarsFile, 0400)
+	if err != nil {
+		return fmt.Errorf("[os.WriteFile] %v", err)
+	}
 
 	return nil
 }
 
-// TODO: CI/CD test should work here for making a request. Both locally and in Github Action pipeline
-// DownloadWorkspaceVariables downloads a workspace's variables from the remote source.
-func (tfc *tfCloud) DownloadWorkspaceVariables(ctx context.Context, workspaceName string) (*gabs.Container, error) {
-	// TODO: get workspace id (require organization name as config component)
-
-	// TODO: Make request to get variables associated with the workspace
-
-	// TODO: parse as gabs and return
+// TODO: implement and add unit tests.
+// generateTFVarsFile aggregates varset variables and workspace-specific variables to create a
+// .tfvars file for the current workspace.
+func (tfc *tfCloud) generateTFVarsFile(
+	workspaceVars VariableMap,
+	workspaceToVarSetVars map[string]VariableMap,
+) ([]byte, error) {
 	return nil, nil
 }
 
-// TODO: Pull in unit tests for this and add to CI/CD pipeline.
+// TODO: implement and add unit tests.
+// parseWorkspaceVars extracts workspace variables from a []byte from the Terraform Cloud
+// endpoint and places them into a VariableMap.
+func (tfc *tfCloud) parseWorkspaceVars(container *gabs.Container) (VariableMap, error) {
+	return nil, nil
+}
+
+// DownloadWorkspaceVariables downloads a workspace's variables from the remote source.
+func (tfc *tfCloud) DownloadWorkspaceVariables(ctx context.Context, workspaceName string) (*gabs.Container, error) {
+	workspaceID, err := tfc.getWorkspaceID(ctx, workspaceName)
+	if err != nil {
+		return nil, fmt.Errorf("[tfc.getWorkspaceID] %v", err)
+	}
+
+	varsJSON, err := tfc.getWorkspaceVariables(ctx, workspaceID)
+	if err != nil {
+		return nil, fmt.Errorf("[tfc.getWorkspaceVariables] %v", err)
+	}
+
+	container, err := gabs.ParseJSON(varsJSON)
+	if err != nil {
+		return nil, fmt.Errorf("[gabs.ParseJSON] %v", err)
+	}
+
+	return container, nil
+}
+
+// getWorkspaceVariables calls the Terraform Cloud API and receives workspace-specific variables
+// data as a []byte.
+func (tfc *tfCloud) getWorkspaceVariables(ctx context.Context, workspaceID string) ([]byte, error) {
+	requestName := "getWorkspaceVars"
+	requestPath := fmt.Sprintf(
+		"https://app.terraform.io/api/v2/workspaces/%v/vars",
+		workspaceID,
+	)
+
+	request, err := tfc.buildTFCloudHTTPRequest(ctx, requestName, "GET", requestPath)
+	if err != nil {
+		return nil, fmt.Errorf("[tfc.buildTFCloudHTTPRequest] %v", err)
+	}
+
+	jsonResponseBytes, err := tfc.terraformCloudRequest(request, requestName)
+
+	if err != nil {
+		return nil, fmt.Errorf("[tfc.terraformCloudRequest] %v", err)
+	}
+
+	return jsonResponseBytes, nil
+}
+
+// getWorkspaceID calls the Terraform Cloud API and gets the workspace ID for the
+// relevant workspace name in the relevant organization.
+func (tfc *tfCloud) getWorkspaceID(ctx context.Context, workspaceName string) (string, error) {
+	requestName := "getWorkspaceID"
+	requestPath := fmt.Sprintf(
+		"https://app.terraform.io/api/v2/organizations/%v/workspaces/%v",
+		tfc.config.TerraformCloudOrganization, workspaceName,
+	)
+
+	request, err := tfc.buildTFCloudHTTPRequest(ctx, requestName, "GET", requestPath)
+
+	if err != nil {
+		return "", fmt.Errorf("[%v] error in newRequest: %v", requestName, err)
+	}
+
+	jsonResponseBytes, err := tfc.terraformCloudRequest(request, requestName)
+
+	if err != nil {
+		return "", err
+	}
+
+	return extractWorkspaceID(jsonResponseBytes)
+}
+
 // extractWorkspaceID is a helper function that uses the gabs library to pull out the workspace ID
 // from a Terraform Cloud API response.
 func extractWorkspaceID(jsonBytes []byte) (string, error) {
@@ -103,7 +263,6 @@ func (tfc *tfCloud) terraformCloudRequest(request *http.Request, requestName str
 	return outputBytes, nil
 }
 
-// TODO: pull in unit tests for this function
 // buildTFCloudHTTPRequest structures a request to the Terraform Cloud api.
 func (tfc *tfCloud) buildTFCloudHTTPRequest(
 	ctx context.Context, requestName string, method string, requestPath string,

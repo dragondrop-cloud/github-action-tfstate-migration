@@ -9,6 +9,9 @@ import (
 	"github.com/kelseyhightower/envconfig"
 )
 
+// VariableMap is a collection of variable key value pairs stored within a map.
+type VariableMap map[string]string
+
 // TFVars is an interface that allows for the extraction of
 // terraform variables from a remote source.
 type TFVars interface {
@@ -16,17 +19,16 @@ type TFVars interface {
 	// DownloadWorkspaceVariables downloads a workspace's variables from the remote source.
 	DownloadWorkspaceVariables(ctx context.Context, workspaceName string) (*gabs.Container, error)
 
-	// PullAllWorkspaceVariables extracts variables for all workspaces and saves them into
+	// CreateAllWorkspaceVarsFiles extracts variables for all workspaces and saves them into
 	// .tfvars files within the appropriate directory.
-	PullAllWorkspaceVariables() error
-
-	// PullWorkspaceVariables extracts variables for a single workspace saves into a .tfvars
-	// file within the appropriate directory.
-	PullWorkspaceVariables(ctx context.Context, workspaceName string) error
+	CreateAllWorkspaceVarsFiles() error
 }
 
 // Config contains the variables needed to support the TFVars interface.
 type Config struct {
+
+	// TerraformCloudOrganization is the name of the Terraform Cloud organization
+	TerraformCloudOrganization string `required:"false"`
 
 	// TerraformCloudToken is a Terraform Cloud Token
 	TerraformCloudToken string `required:"true"`
