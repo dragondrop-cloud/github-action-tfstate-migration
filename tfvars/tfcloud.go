@@ -21,12 +21,14 @@ type tfCloud struct {
 	httpClient http.Client
 }
 
+// TODO: Update and adapt this function to the new process of pulling in varSetVars
 // CreateAllWorkspaceVarsFiles extracts variables for all workspaces and saves them into
 // .tfvars files within the appropriate directory.
 func (tfc *tfCloud) CreateAllWorkspaceVarsFiles() error {
 	ctx := context.Background()
 
-	workspaceToVarSetVars, err := tfc.getVarSetVarsByWorkspace()
+	// TODO:
+	workspaceToVarSetVars, err := tfc.getWorkspaceToVarSetVars()
 	if err != nil {
 		return fmt.Errorf("[tfc.getVarSetVarsByWorkspace] %v", err)
 	}
@@ -40,30 +42,59 @@ func (tfc *tfCloud) CreateAllWorkspaceVarsFiles() error {
 				err,
 			)
 		}
+		// TODO
 	}
 	return nil
 }
 
 // TODO: Implement and test end to end
-// getVarSetVarsByWorkspace produces a map between a workspace name and variables associated
+// getWorkspaceToVarSetVars produces a map between a workspace name and variables associated
 // with that workspace from variable sets.
-func (tfc *tfCloud) getVarSetVarsByWorkspace() (map[string]VariableMap, error) {
-	varSetIDToWorkspaces, err := tfc.getVarSetIdsForOrg()
+func (tfc *tfCloud) getWorkspaceToVarSetVars() (map[string]VariableMap, error) {
+	varSetIDs, err := tfc.getVarSetIdsForOrg()
 	if err != nil {
 		return nil, fmt.Errorf("[tfc.getVarSetIdsForOrg] %v", err)
 	}
 
-	workspaceToVarSetVars, err := tfc.getVarSetVars(varSetIDToWorkspaces)
+	varSetVars, err := tfc.getVarSetVars(varSetIDs)
 	if err != nil {
 		return nil, fmt.Errorf("[tfc.getVarSetVars] %v", err)
+	}
+
+	// TODO: **************************************************************************************
+	// TODO: The current line
+	// TODO: Update
+	// TODO: **************************************************************************************
+	workspaceToVarSetIDs, err := tfc.getWorkspaceToVarSetIDs()
+	if err != nil {
+		return nil, fmt.Errorf("[tfc.getWorkspaceToVarSetIDs] %v", err)
+	}
+
+	// TODO: Implement and unit test
+	workspaceToVarSetVars, err := tfc.createWorkspaceToVarSetVars(varSetVars, workspaceToVarSetIDs)
+	if err != nil {
+		return nil, fmt.Errorf("[tfc.getWorkspaceToVarSetVars] %v", err)
 	}
 
 	return workspaceToVarSetVars, nil
 }
 
 // TODO: Implement and unit test
-func (tfc *tfCloud) getVarSetIdsForOrg() (map[string]map[string]bool, error) {
-	// GET organizations/:organization_name/varsets
+// getWorkspaceToVarSetIDs
+func (tfc *tfCloud) getWorkspaceToVarSetIDs() (map[string]map[string]bool, error) {
+	return nil, nil
+}
+
+// TODO: implement and unit test
+// createWorkspaceToVarSetVars
+func (tfc *tfCloud) createWorkspaceToVarSetVars(
+	varSetVars map[string]VariableMap, workspaceToVarSetIDs map[string]map[string]bool,
+) (map[string]VariableMap, error) {
+	return nil, nil
+}
+
+// getVarSetIdsForOrg returns a map between var set ids and the set of corresponding workspace ids.
+func (tfc *tfCloud) getVarSetIdsForOrg() ([]string, error) {
 	requestPath := fmt.Sprintf(
 		"https://app.terraform.io/api/v2/organizations/%v/varsets",
 		tfc.config.TerraformCloudOrganization,
@@ -84,16 +115,18 @@ func (tfc *tfCloud) getVarSetIdsForOrg() (map[string]map[string]bool, error) {
 		return nil, fmt.Errorf("[tfc.buildTFCloudHTTPRequest] %v", err)
 	}
 
-	varSetIdToWorkspaces, err := tfc.extractVarSetInformation(response)
+	varSetIds, err := tfc.extractVarSetIDs(response)
 	if err != nil {
 		return nil, fmt.Errorf("[tfc.extractVarSetInformation] %v", err)
 	}
 
-	return varSetIdToWorkspaces, nil
+	return varSetIds, nil
 }
 
-func (tfc *tfCloud) extractVarSetInformation(response []byte) (map[string]map[string]bool, error) {
-	varSetToWorkspaces := map[string]map[string]bool{}
+// extractVarSetIDs extracts variable set ids from a response json
+// from the Terraform Cloud API.
+func (tfc *tfCloud) extractVarSetIDs(response []byte) ([]string, error) {
+	var varSetIDs []string
 
 	container, err := gabs.ParseJSON(response)
 	if err != nil {
@@ -103,34 +136,19 @@ func (tfc *tfCloud) extractVarSetInformation(response []byte) (map[string]map[st
 	i := 0
 	for container.Exists("data", strconv.Itoa(i)) {
 		varSetID := container.Search("data", strconv.Itoa(i), "id").Data().(string)
-		varSetToWorkspaces[varSetID] = map[string]bool{}
-
-		j := 0
-		for container.Exists("data", strconv.Itoa(i), "relationships", "workspaces", "data", strconv.Itoa(j)) {
-			workspaceID := container.Search(
-				"data",
-				strconv.Itoa(i),
-				"relationships",
-				"workspaces",
-				"data",
-				strconv.Itoa(j),
-				"id").Data().(string)
-			varSetToWorkspaces[varSetID][workspaceID] = true
-			j++
-		}
-
+		varSetIDs = append(varSetIDs, varSetID)
 		i++
 	}
 
-	return varSetToWorkspaces, nil
+	return varSetIDs, nil
 }
 
-// GET varsets/:varset_id/relationships/vars
-// TODO: Implement and unit test
-func (tfc *tfCloud) getVarSetVars(varSetToWorkspaces map[string]map[string]bool) (map[string]VariableMap, error) {
-	workspaceToVarSetVars := map[string]VariableMap{}
+// getVarSetVars pulls down from terraform cloud all variables for each variable set passed in via
+// varSetIDs.
+func (tfc *tfCloud) getVarSetVars(varSetIDs []string) (map[string]VariableMap, error) {
+	varSetToVars := map[string]VariableMap{}
 
-	for varSetID := range varSetToWorkspaces {
+	for _, varSetID := range varSetIDs {
 		requestPath := fmt.Sprintf("https://app.terraform.io/api/v2/varsets/%v/relationships/vars", varSetID)
 
 		httpRequest, err := tfc.buildTFCloudHTTPRequest(
@@ -148,7 +166,9 @@ func (tfc *tfCloud) getVarSetVars(varSetToWorkspaces map[string]map[string]bool)
 			return nil, fmt.Errorf("[tfc.buildTFCloudHTTPRequest] %v", err)
 		}
 
-		workspaceToVarSetVars, err = tfc.extractWorkspaceVars(response, varSetToWorkspaces, workspaceToVarSetVars)
+		varSetToVars, err = tfc.extractVarsFromVarSet(
+			response, varSetToVars, varSetID,
+		)
 		if err != nil {
 			return nil, fmt.Errorf("[tfc.extractWorkspaceVars] %v", err)
 		}
@@ -157,15 +177,37 @@ func (tfc *tfCloud) getVarSetVars(varSetToWorkspaces map[string]map[string]bool)
 	return nil, nil
 }
 
-// TODO: Implement and unit test
-// extractWorkspaceVars extracts workspace variables from the current variable set's variables.
-func (tfc *tfCloud) extractWorkspaceVars(
+// extractVarsFromVarSet extracts workspace variables from the current variable set's variables.
+func (tfc *tfCloud) extractVarsFromVarSet(
 	varSetVarsResponse []byte,
-	varSetIDToWorkspaces map[string]map[string]bool,
-	workspaceToVarSetVars map[string]VariableMap,
+	varSetToVars map[string]VariableMap,
+	varSetID string,
 ) (map[string]VariableMap, error) {
+	container, err := gabs.ParseJSON(varSetVarsResponse)
+	if err != nil {
+		return nil, fmt.Errorf("[gabs.ParseJSON] %v", err)
+	}
 
-	return nil, nil
+	varMap := VariableMap{}
+	i := 0
+
+	for container.Exists("data", strconv.Itoa(i)) {
+		varKey := container.Search("data", strconv.Itoa(i), "attributes", "key").Data().(string)
+		value := container.Search("data", strconv.Itoa(i), "attributes", "value").Data()
+
+		if value == nil {
+			varValue := "null"
+			varMap[varKey] = varValue
+		} else {
+			varValue := container.Search("data", strconv.Itoa(i), "attributes", "value").Data().(string)
+			varMap[varKey] = varValue
+		}
+		i++
+	}
+
+	varSetToVars[varSetID] = varMap
+
+	return varSetToVars, nil
 }
 
 // PullWorkspaceVariables extracts variables for a single workspace saves into a .tfvars
@@ -208,7 +250,7 @@ func (tfc *tfCloud) generateTFVarsFile(
 	return nil, nil
 }
 
-// TODO: implement and add unit tests.
+// TODO: implement and add unit tests. Not even clear that this is needed to be honest.
 // parseWorkspaceVars extracts workspace variables from a []byte from the Terraform Cloud
 // endpoint and places them into a VariableMap.
 func (tfc *tfCloud) parseWorkspaceVars(container *gabs.Container) (VariableMap, error) {
