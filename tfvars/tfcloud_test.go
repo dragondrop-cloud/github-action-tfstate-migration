@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"reflect"
 	"testing"
 
 	"github.com/joho/godotenv"
@@ -82,6 +83,84 @@ func TestExtractWorkspaceID(t *testing.T) {
 	expectedValue := "8675309"
 	if outputValue != expectedValue {
 		t.Errorf("Got %v, expected %v", expectedValue, outputValue)
+	}
+}
+
+func TestExtractVarSetInformation(t *testing.T) {
+	inputResponse := []byte(`{
+  "data": [
+    {
+      "id": "varset-mio9UUFyFMjU33S4",
+      "type": "varsets",
+      "attributes":  {
+         "name": "varset-b7af6a77",
+         "workspace-count": 2
+      },
+      "relationships": {
+        "organization": {
+          "data": {"id": "organization_1", "type": "organizations"}
+        },
+        "vars": {
+          "data": [
+           {"id": "var-abcd12345", "type": "vars"}
+          ]
+        },
+        "workspaces": {
+          "data": [
+           {"id": "ws-abcd12345", "type": "workspaces"},
+           {"id": "ws-abcd12346", "type": "workspaces"}
+          ]
+        }
+      }
+    },
+	{
+      "id": "varset-tuyo9UUFyFMjU33S4",
+      "type": "varsets",
+      "attributes":  {
+         "name": "varset-b7af6a77",
+         "workspace-count": 2
+      },
+      "relationships": {
+        "organization": {
+          "data": {"id": "organization_1", "type": "organizations"}
+        },
+        "vars": {
+          "data": [
+           {"id": "var-abcd12345", "type": "vars"}
+          ]
+        },
+        "workspaces": {
+          "data": [
+           {"id": "ws-xyze12345", "type": "workspaces"},
+           {"id": "ws-xyze12346", "type": "workspaces"}
+          ]
+        }
+      }
+    }
+  ]
+}
+`)
+
+	expectedOutputMapToSet := map[string]map[string]bool{
+		"varset-mio9UUFyFMjU33S4": {
+			"ws-abcd12345": true,
+			"ws-abcd12346": true,
+		},
+		"varset-tuyo9UUFyFMjU33S4": {
+			"ws-xyze12345": true,
+			"ws-xyze12346": true,
+		},
+	}
+
+	tfc := tfCloud{}
+
+	outputMapToSet, err := tfc.extractVarSetInformation(inputResponse)
+	if err != err {
+		t.Errorf("unexpected error in tfc.extractVarSetInformation: %v", err)
+	}
+	
+	if !reflect.DeepEqual(outputMapToSet, expectedOutputMapToSet) {
+		t.Errorf("got %v\n expected %v", outputMapToSet, expectedOutputMapToSet)
 	}
 }
 
