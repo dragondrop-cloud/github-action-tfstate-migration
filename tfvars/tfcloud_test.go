@@ -2,7 +2,6 @@ package tfvars
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -18,6 +17,34 @@ import (
 // all vars per varset id
 // Get list of all var set ids
 // all vars from varsets to workspace (easy)
+
+func TestGetWorkspaceToVarSetIds(t *testing.T) {
+	_, isRemote := os.LookupEnv("TerraformCloudToken")
+	if !isRemote {
+		err := godotenv.Load()
+		if err != nil {
+			t.Errorf("[godotenv.Load] Unexpected error: %v", err)
+		}
+	}
+
+	tfc := tfCloud{
+		config: &Config{
+			TerraformCloudToken:        os.Getenv("TerraformCloudToken"),
+			TerraformCloudOrganization: os.Getenv("TerraformCloudOrganization"),
+			WorkspaceToDirectory:       map[string]string{"google-backend-api-dev": "/"},
+		},
+		httpClient: http.Client{},
+	}
+
+	output, err := tfc.getWorkspaceToVarSetIDs()
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	if output == nil {
+		t.Errorf("expected non-nil output from tfc.getWorkspaceToVarSetIDs")
+	}
+}
 
 func TestGetVarSetIdsForOrg(t *testing.T) {
 	_, isRemote := os.LookupEnv("TerraformCloudToken")
@@ -36,9 +63,13 @@ func TestGetVarSetIdsForOrg(t *testing.T) {
 		httpClient: http.Client{},
 	}
 
-	_, err := tfc.getVarSetIdsForOrg()
+	output, err := tfc.getVarSetIdsForOrg()
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
+	}
+
+	if output == nil {
+		t.Errorf("expected non-nil output from tfc.getVarSetIdsForOrg")
 	}
 }
 
@@ -58,10 +89,14 @@ func TestGetWorkspaceVariables(t *testing.T) {
 		httpClient: http.Client{},
 	}
 
-	_, err := tfc.getWorkspaceVariables(context.Background(), os.Getenv("workspaceID"))
+	output, err := tfc.getWorkspaceVariables(context.Background(), os.Getenv("workspaceID"))
 
 	if err != nil {
 		t.Errorf("[tfc.getWorkspaceVariables] unexpected error: %v", err)
+	}
+
+	if output == nil {
+		t.Errorf("expected non-nil output from tfc.getWorkspaceVariables")
 	}
 }
 
@@ -81,13 +116,14 @@ func TestGetVarSetVars(t *testing.T) {
 		httpClient: http.Client{},
 	}
 
-	output, err := tfc.getVarSetVars([]string{"varset-5XwxVrQmd96Td2MK"})
+	output, err := tfc.getVarSetVars([]string{os.Getenv("VarSetID")})
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
 
-	fmt.Println(output)
-
+	if output == nil {
+		t.Errorf("expected non-nil output from tfc.getVarSetVars")
+	}
 }
 
 func TestBuildTFCloudHTTPRequest(t *testing.T) {
@@ -211,6 +247,53 @@ func TestExtractVarSetIDs(t *testing.T) {
 
 	if !reflect.DeepEqual(outputMapToSet, expectedOutputMapToSet) {
 		t.Errorf("got %v\n expected %v", outputMapToSet, expectedOutputMapToSet)
+	}
+}
+
+func TestExtractVarSetIDsForWorkspace(t *testing.T) {
+	inputResponse := []byte(`
+	{
+   "data":[
+      {
+         "id":"varset-yN8675309",
+         "type":"varsets",
+         "attributes":{
+            "name":"var_set_name"
+         },
+         "relationships":{
+            "workspaces":{
+               "data":[]
+            }
+         }
+      },
+      {
+         "id":"varset-W1324adf234",
+         "type":"varsets",
+         "relationships":{
+            "organization":{
+            },
+            "vars":{
+               "data":[]
+            }
+         }
+      }
+   ]
+}`)
+
+	expectedOutput := map[string]bool{
+		"varset-W1324adf234": true,
+		"varset-yN8675309":   true,
+	}
+
+	tfc := tfCloud{}
+
+	output, err := tfc.extractVarSetIDsForWorkspace(inputResponse)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	if !reflect.DeepEqual(output, expectedOutput) {
+		t.Errorf("got %v, expected %v", output, expectedOutput)
 	}
 }
 
