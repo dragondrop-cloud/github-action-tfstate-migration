@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/Jeffail/gabs/v2"
 	"github.com/kelseyhightower/envconfig"
 )
 
@@ -17,7 +16,7 @@ type VariableMap map[string]string
 type TFVars interface {
 
 	// DownloadWorkspaceVariables downloads a workspace's variables from the remote source.
-	DownloadWorkspaceVariables(ctx context.Context, workspaceName string) (*gabs.Container, error)
+	DownloadWorkspaceVariables(ctx context.Context, workspaceName string) ([]byte, error)
 
 	// CreateAllWorkspaceVarsFiles extracts variables for all workspaces and saves them into
 	// .tfvars files within the appropriate directory.

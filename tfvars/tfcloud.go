@@ -21,13 +21,13 @@ type tfCloud struct {
 	httpClient http.Client
 }
 
-// TODO: Update and adapt this function to the new process of pulling in varSetVars
+// TODO: Build e2e unit test on this function
+// TODO: general re-organization of functions is needed here
 // CreateAllWorkspaceVarsFiles extracts variables for all workspaces and saves them into
 // .tfvars files within the appropriate directory.
 func (tfc *tfCloud) CreateAllWorkspaceVarsFiles() error {
 	ctx := context.Background()
 
-	// TODO:
 	workspaceToVarSetVars, err := tfc.getWorkspaceToVarSetVars()
 	if err != nil {
 		return fmt.Errorf("[tfc.getVarSetVarsByWorkspace] %v", err)
@@ -42,7 +42,6 @@ func (tfc *tfCloud) CreateAllWorkspaceVarsFiles() error {
 				err,
 			)
 		}
-		// TODO
 	}
 	return nil
 }
@@ -77,6 +76,14 @@ func (tfc *tfCloud) getWorkspaceToVarSetVars() (map[string]VariableMap, error) {
 	}
 
 	return workspaceToVarSetVars, nil
+}
+
+// TODO: implement and unit test
+// createWorkspaceToVarSetVars
+func (tfc *tfCloud) createWorkspaceToVarSetVars(
+	varSetVars map[string]VariableMap, workspaceToVarSetIDs map[string]map[string]bool,
+) (map[string]VariableMap, error) {
+	return nil, nil
 }
 
 // getWorkspaceToVarSetIDs
@@ -140,14 +147,6 @@ func (tfc *tfCloud) extractVarSetIDsForWorkspace(response []byte) (map[string]bo
 	}
 
 	return outputMap, nil
-}
-
-// TODO: implement and unit test
-// createWorkspaceToVarSetVars
-func (tfc *tfCloud) createWorkspaceToVarSetVars(
-	varSetVars map[string]VariableMap, workspaceToVarSetIDs map[string]map[string]bool,
-) (map[string]VariableMap, error) {
-	return nil, nil
 }
 
 // getVarSetIdsForOrg returns a map between var set ids and the set of corresponding workspace ids.
@@ -279,7 +278,7 @@ func (tfc *tfCloud) PullWorkspaceVariables(
 		return fmt.Errorf("[tfc.DownloadWorkspaceVariables] %v", err)
 	}
 
-	workspaceVarsMap, err := tfc.parseWorkspaceVars(workspaceVarsContainer)
+	workspaceVarsMap, err := tfc.extractWorkspaceVars(workspaceVarsContainer)
 	if err != nil {
 		return fmt.Errorf("[tfc.parseWorkspaceVars] %v", err)
 	}
@@ -307,15 +306,36 @@ func (tfc *tfCloud) generateTFVarsFile(
 	return nil, nil
 }
 
-// TODO: implement and add unit tests. Not even clear that this is needed to be honest.
 // parseWorkspaceVars extracts workspace variables from a []byte from the Terraform Cloud
 // endpoint and places them into a VariableMap.
-func (tfc *tfCloud) parseWorkspaceVars(container *gabs.Container) (VariableMap, error) {
-	return nil, nil
+func (tfc *tfCloud) extractWorkspaceVars(workspaceResponse []byte) (VariableMap, error) {
+	container, err := gabs.ParseJSON(workspaceResponse)
+	if err != nil {
+		return nil, fmt.Errorf("[gabs.ParseJSON] %v", err)
+	}
+
+	outputVarMap := VariableMap{}
+
+	i := 0
+	for container.Exists("data", strconv.Itoa(i)) {
+		varKey := container.Search("data", strconv.Itoa(i), "attributes", "key").Data().(string)
+		value := container.Search("data", strconv.Itoa(i), "attributes", "value").Data()
+
+		if value == nil {
+			varValue := "null"
+			outputVarMap[varKey] = varValue
+		} else {
+			varValue := container.Search("data", strconv.Itoa(i), "attributes", "value").Data().(string)
+			outputVarMap[varKey] = varValue
+		}
+		i++
+	}
+
+	return outputVarMap, nil
 }
 
 // DownloadWorkspaceVariables downloads a workspace's variables from the remote source.
-func (tfc *tfCloud) DownloadWorkspaceVariables(ctx context.Context, workspaceName string) (*gabs.Container, error) {
+func (tfc *tfCloud) DownloadWorkspaceVariables(ctx context.Context, workspaceName string) ([]byte, error) {
 	workspaceID, err := tfc.getWorkspaceID(ctx, workspaceName)
 	if err != nil {
 		return nil, fmt.Errorf("[tfc.getWorkspaceID] %v", err)
@@ -326,12 +346,7 @@ func (tfc *tfCloud) DownloadWorkspaceVariables(ctx context.Context, workspaceNam
 		return nil, fmt.Errorf("[tfc.getWorkspaceVariables] %v", err)
 	}
 
-	container, err := gabs.ParseJSON(varsJSON)
-	if err != nil {
-		return nil, fmt.Errorf("[gabs.ParseJSON] %v", err)
-	}
-
-	return container, nil
+	return varsJSON, nil
 }
 
 // getWorkspaceVariables calls the Terraform Cloud API and receives workspace-specific variables

@@ -178,6 +178,61 @@ func TestExtractWorkspaceID(t *testing.T) {
 	}
 }
 
+func TestExtractWorkspaceVars(t *testing.T) {
+	inputResponse := []byte(`
+{
+   "data":[
+      {
+         "id":"var-AD4pibb9nxo1468E",
+         "type":"vars",
+         "attributes":{
+            "key":"varKey_1",
+            "value":"varVal_1",
+            "hcl":false
+         }
+      },
+      {
+         "id":"var-dewc9nxoasdE",
+         "type":"vars",
+         "attributes":{
+            "key":"varKey_2",
+            "value":null,
+			"sensitive": true,
+            "hcl":false
+         }
+      },
+      {
+         "id":"var-SDBnxoasdE",
+         "type":"vars",
+         "attributes":{
+            "key":"varKey_3",
+            "value":"varValue_3",
+			"sensitive": true,
+            "hcl":false
+         }
+      }
+   ]
+}
+`)
+
+	expectedOutput := VariableMap{
+		"varKey_1": "varVal_1",
+		"varKey_2": "null",
+		"varKey_3": "varValue_3",
+	}
+
+	tfc := tfCloud{}
+
+	output, err := tfc.extractWorkspaceVars(inputResponse)
+	if err != nil {
+		t.Errorf("unexpected err in tfc.extractWorkspaceVars: %v", err)
+	}
+
+	if !reflect.DeepEqual(output, expectedOutput) {
+		t.Errorf("got %v, expected %v", output, expectedOutput)
+	}
+}
+
 func TestExtractVarSetIDs(t *testing.T) {
 	inputResponse := []byte(`{
   "data": [
