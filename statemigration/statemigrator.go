@@ -1,7 +1,7 @@
 package statemigration
 
-// Workspace is a relative path to a directory that corresponds to a single Terraform workspace.
-type Workspace string
+// WorkspaceDirectory is a relative path to a directory that corresponds to a single Terraform workspace.
+type WorkspaceDirectory string
 
 // StateMigrator interface for running Terraform state migrations.
 type StateMigrator interface {
@@ -10,7 +10,7 @@ type StateMigrator interface {
 	MigrateAllWorkspaces() error
 
 	// MigrateWorkspace runs migrations for the workspace specified.
-	MigrateWorkspace(w Workspace) error
+	MigrateWorkspace(w WorkspaceDirectory) error
 }
 
 // stateMigrator implements the StateMigrator interface.

@@ -33,7 +33,7 @@ func (tfc *tfCloud) CreateAllWorkspaceVarsFiles() error {
 		return fmt.Errorf("[tfc.getVarSetVarsByWorkspace] %v", err)
 	}
 
-	for workspace, _ := range tfc.config.WorkspaceToDirectory {
+	for workspace := range tfc.config.WorkspaceToDirectory {
 		err = tfc.PullWorkspaceVariables(ctx, workspace, workspaceToVarSetVars)
 		if err != nil {
 			return fmt.Errorf(
@@ -195,7 +195,7 @@ func (tfc *tfCloud) getWorkspaceToVarSetIDs() (map[string]map[string]bool, error
 
 	outputMap := map[string]map[string]bool{}
 
-	for workspace, _ := range tfc.config.WorkspaceToDirectory {
+	for workspace := range tfc.config.WorkspaceToDirectory {
 		workspaceID, err := tfc.getWorkspaceID(ctx, workspace)
 		if err != nil {
 			return nil, fmt.Errorf("[tfc.getWorkspaceID] %v", err)
