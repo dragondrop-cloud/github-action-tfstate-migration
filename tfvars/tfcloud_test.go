@@ -6,10 +6,32 @@ import (
 	"net/http/httptest"
 	"os"
 	"reflect"
+	"strconv"
 	"testing"
 
 	"github.com/joho/godotenv"
 )
+
+func CreateTFC(t *testing.T) tfCloud {
+	_, isRemote := os.LookupEnv("TerraformCloudToken")
+	if !isRemote {
+		err := godotenv.Load()
+		if err != nil {
+			t.Errorf("[godotenv.Load] Unexpected error: %v", err)
+		}
+	}
+
+	tfc := tfCloud{
+		config: &Config{
+			TerraformCloudToken:        os.Getenv("TerraformCloudToken"),
+			TerraformCloudOrganization: os.Getenv("TerraformCloudOrganization"),
+			WorkspaceToDirectory:       map[string]string{"google-backend-api-dev": "/"},
+		},
+		httpClient: http.Client{},
+	}
+
+	return tfc
+}
 
 func TestCreateWorkspaceToVarSetVars(t *testing.T) {
 	inputVarSetVars := map[string]VariableMap{
@@ -42,7 +64,7 @@ func TestCreateWorkspaceToVarSetVars(t *testing.T) {
 		},
 	}
 
-	tfc := tfCloud{}
+	tfc := CreateTFC(t)
 
 	outputWorkspaceToVarSetVars, err := tfc.createWorkspaceToVarSetVars(
 		inputVarSetVars,
@@ -57,23 +79,34 @@ func TestCreateWorkspaceToVarSetVars(t *testing.T) {
 	}
 }
 
-func TestGetWorkspaceToVarSetIds(t *testing.T) {
-	_, isRemote := os.LookupEnv("TerraformCloudToken")
-	if !isRemote {
-		err := godotenv.Load()
-		if err != nil {
-			t.Errorf("[godotenv.Load] Unexpected error: %v", err)
-		}
+func TestGenerateTFVarsFile(t *testing.T) {
+	inputWorkspaceVars := VariableMap{
+		"var_1": "val_1",
+		"var_2": "val_2",
 	}
 
-	tfc := tfCloud{
-		config: &Config{
-			TerraformCloudToken:        os.Getenv("TerraformCloudToken"),
-			TerraformCloudOrganization: os.Getenv("TerraformCloudOrganization"),
-			WorkspaceToDirectory:       map[string]string{"google-backend-api-dev": "/"},
-		},
-		httpClient: http.Client{},
+	inputWorkspaceVarSetVars := VariableMap{
+		"var_2": "val_xyz",
+		"var_3": "val_3",
 	}
+
+	tfc := CreateTFC(t)
+	byteArray, _ := tfc.generateTFVarsFile(inputWorkspaceVars, inputWorkspaceVarSetVars)
+
+	expectedOutput := `var_2 = "val_2"
+var_3 = "val_3"
+var_1 = "val_1"
+`
+
+	if expectedOutput != string(byteArray) {
+		t.Errorf("got:\n%v\nexpected:\n%v",
+			strconv.Quote(string(byteArray)),
+			expectedOutput)
+	}
+}
+
+func TestGetWorkspaceToVarSetIds(t *testing.T) {
+	tfc := CreateTFC(t)
 
 	output, err := tfc.getWorkspaceToVarSetIDs()
 	if err != nil {
@@ -86,21 +119,7 @@ func TestGetWorkspaceToVarSetIds(t *testing.T) {
 }
 
 func TestGetVarSetIdsForOrg(t *testing.T) {
-	_, isRemote := os.LookupEnv("TerraformCloudToken")
-	if !isRemote {
-		err := godotenv.Load()
-		if err != nil {
-			t.Errorf("[godotenv.Load] Unexpected error: %v", err)
-		}
-	}
-
-	tfc := tfCloud{
-		config: &Config{
-			TerraformCloudToken:        os.Getenv("TerraformCloudToken"),
-			TerraformCloudOrganization: os.Getenv("TerraformCloudOrganization"),
-		},
-		httpClient: http.Client{},
-	}
+	tfc := CreateTFC(t)
 
 	output, err := tfc.getVarSetIdsForOrg()
 	if err != nil {
@@ -112,21 +131,21 @@ func TestGetVarSetIdsForOrg(t *testing.T) {
 	}
 }
 
-func TestGetWorkspaceVariables(t *testing.T) {
-	_, isRemote := os.LookupEnv("TerraformCloudToken")
-	if !isRemote {
-		err := godotenv.Load()
-		if err != nil {
-			t.Errorf("[godotenv.Load] Unexpected error: %v", err)
-		}
+func TestGetWorkspaceToVarSetVars(t *testing.T) {
+	tfc := CreateTFC(t)
+
+	output, err := tfc.getWorkspaceToVarSetVars()
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
 	}
 
-	tfc := tfCloud{
-		config: &Config{
-			TerraformCloudToken: os.Getenv("TerraformCloudToken"),
-		},
-		httpClient: http.Client{},
+	if output == nil {
+		t.Errorf("expected non-nil output from tfc.getWorkspaceToVarSetVars")
 	}
+}
+
+func TestGetWorkspaceVariables(t *testing.T) {
+	tfc := CreateTFC(t)
 
 	output, err := tfc.getWorkspaceVariables(context.Background(), os.Getenv("workspaceID"))
 
@@ -140,20 +159,7 @@ func TestGetWorkspaceVariables(t *testing.T) {
 }
 
 func TestGetVarSetVars(t *testing.T) {
-	_, isRemote := os.LookupEnv("TerraformCloudToken")
-	if !isRemote {
-		err := godotenv.Load()
-		if err != nil {
-			t.Errorf("[godotenv.Load] Unexpected error: %v", err)
-		}
-	}
-
-	tfc := tfCloud{
-		config: &Config{
-			TerraformCloudToken: os.Getenv("TerraformCloudToken"),
-		},
-		httpClient: http.Client{},
-	}
+	tfc := CreateTFC(t)
 
 	output, err := tfc.getVarSetVars([]string{os.Getenv("VarSetID")})
 	if err != nil {
