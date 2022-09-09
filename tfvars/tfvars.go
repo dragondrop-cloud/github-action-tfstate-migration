@@ -8,9 +8,6 @@ import (
 	"github.com/kelseyhightower/envconfig"
 )
 
-// VariableMap is a collection of variable key value pairs stored within a map.
-type VariableMap map[string]string
-
 // TFVars is an interface that allows for the extraction of
 // terraform variables from a remote source.
 type TFVars interface {

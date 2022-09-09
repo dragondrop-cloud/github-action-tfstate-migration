@@ -65,11 +65,6 @@ func (tfc *tfCloud) getWorkspaceToVarSetVars() (map[string]VariableMap, error) {
 		return nil, fmt.Errorf("[tfc.getWorkspaceToVarSetIDs] %v", err)
 	}
 
-	// TODO: **************************************************************************************
-	// TODO: The current line
-	// TODO: Update
-	// TODO: **************************************************************************************
-	// TODO: Implement and unit test
 	workspaceToVarSetVars, err := tfc.createWorkspaceToVarSetVars(varSetVars, workspaceToVarSetIDs)
 	if err != nil {
 		return nil, fmt.Errorf("[tfc.getWorkspaceToVarSetVars] %v", err)
@@ -78,15 +73,27 @@ func (tfc *tfCloud) getWorkspaceToVarSetVars() (map[string]VariableMap, error) {
 	return workspaceToVarSetVars, nil
 }
 
-// TODO: implement and unit test
-// createWorkspaceToVarSetVars
+// createWorkspaceToVarSetVars takes an input of two maps: var set ids to their variables and
+// workspace to var set ids and returns a map of workspace to variable maps.
 func (tfc *tfCloud) createWorkspaceToVarSetVars(
 	varSetVars map[string]VariableMap, workspaceToVarSetIDs map[string]map[string]bool,
 ) (map[string]VariableMap, error) {
-	return nil, nil
+	outputWorkspaceToVariable := map[string]VariableMap{}
+
+	for workspace, varSetIDs := range workspaceToVarSetIDs {
+		currentVarMap := VariableMap{}
+
+		for varSetID := range varSetIDs {
+			currentVarMap = currentVarMap.Merge(varSetVars[varSetID])
+		}
+
+		outputWorkspaceToVariable[workspace] = currentVarMap
+	}
+
+	return outputWorkspaceToVariable, nil
 }
 
-// getWorkspaceToVarSetIDs
+// getWorkspaceToVarSetIDs produce a map of workspaces to the corresponding var set IDs.
 func (tfc *tfCloud) getWorkspaceToVarSetIDs() (map[string]map[string]bool, error) {
 	ctx := context.Background()
 

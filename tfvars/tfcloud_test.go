@@ -11,12 +11,51 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// Option 2: (Winner!)
-// Get list of all workspace ids
-// Get workspace to var set ids
-// all vars per varset id
-// Get list of all var set ids
-// all vars from varsets to workspace (easy)
+func TestCreateWorkspaceToVarSetVars(t *testing.T) {
+	inputVarSetVars := map[string]VariableMap{
+		"var_set_id_1": {
+			"var1": "abc",
+			"var2": "abc",
+		},
+		"var_set_id_2": {
+			"var1": "edf",
+			"var3": "xyz",
+		},
+		"var_set_id_3": {
+			"var4": "123",
+		},
+	}
+
+	inputWorkspaceToVarSetIDs := map[string]map[string]bool{
+		"workspace_1": {"var_set_id_1": true, "var_set_id_2": true},
+		"workspace_2": {"var_set_id_3": true},
+	}
+
+	expectedOutput := map[string]VariableMap{
+		"workspace_1": {
+			"var1": "edf",
+			"var2": "abc",
+			"var3": "xyz",
+		},
+		"workspace_2": {
+			"var4": "123",
+		},
+	}
+
+	tfc := tfCloud{}
+
+	outputWorkspaceToVarSetVars, err := tfc.createWorkspaceToVarSetVars(
+		inputVarSetVars,
+		inputWorkspaceToVarSetIDs,
+	)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	if !reflect.DeepEqual(expectedOutput, outputWorkspaceToVarSetVars) {
+		t.Errorf("got %v, expected %v", outputWorkspaceToVarSetVars, expectedOutput)
+	}
+}
 
 func TestGetWorkspaceToVarSetIds(t *testing.T) {
 	_, isRemote := os.LookupEnv("TerraformCloudToken")
