@@ -8,6 +8,7 @@ import (
 )
 
 func main() {
+	// TODO: Refactor configuration to occur within the NewStateMigrator call itself
 	config, err := statemigration.NewConfig()
 	if err != nil {
 		fmt.Printf("error loading action configuration: %v", err)

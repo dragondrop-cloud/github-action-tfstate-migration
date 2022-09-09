@@ -8,4 +8,4 @@ services:
         TERRAFORM_VERSION: "1.2.4"
     environment:
       - "ISAPPLY=false"
-      - "WORKSPACEDIRECTORIES=null"
+      - "WORKSPACETOIRECTORY=null"

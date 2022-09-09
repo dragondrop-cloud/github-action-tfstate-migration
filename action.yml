@@ -12,8 +12,8 @@ inputs:
     description: "Version of terraform to use for running the statemigration."
     required: true
     default: "latest"
-  workspace-directories:
-    description: "List of relative paths to workspace directories with statemigration to perform."
+  workspace-to-directories:
+    description: "Map of workspace names to directories with state migration commands to be run."
     required: true
 runs:
   using: "docker"
@@ -21,4 +21,4 @@ runs:
   env:
     TERRAFORM_VERSION: ${{ inputs.terraform-version }}
     ISAPPLY: ${{ inputs.is-apply }}
-    WORKSPACEDIRECTORIES: ${{ inputs.workspace-directories }}
+    WORKSPACETODIRECTORY: ${{ inputs.workspace-directories }}

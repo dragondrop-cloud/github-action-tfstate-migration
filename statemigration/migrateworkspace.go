@@ -9,14 +9,14 @@ import (
 
 // MigrateAllWorkspaces runs migrations for all workspaces by coordinating calls to MigrateWorkspace.
 func (sm *stateMigrator) MigrateAllWorkspaces() error {
-	for _, workspace := range sm.config.WorkspaceDirectories {
-		if workspace == "null" {
+	for _, directory := range sm.config.WorkspaceToDirectory {
+		if directory == "null" {
 			continue
 		}
 
-		err := sm.MigrateWorkspace(Workspace(workspace))
+		err := sm.MigrateWorkspace(WorkspaceDirectory(directory))
 		if err != nil {
-			return fmt.Errorf("[sm.MigrateWorkspace] Error migrating %v workspace: %v", workspace, err)
+			return fmt.Errorf("[sm.MigrateWorkspace] Error migrating %v workspace: %v", directory, err)
 		}
 
 	}
@@ -25,7 +25,7 @@ func (sm *stateMigrator) MigrateAllWorkspaces() error {
 }
 
 // MigrateWorkspace runs migrations for the workspace specified.
-func (sm *stateMigrator) MigrateWorkspace(w Workspace) error {
+func (sm *stateMigrator) MigrateWorkspace(w WorkspaceDirectory) error {
 	err := os.Chdir(fmt.Sprintf("/github/workspace%v", string(w)))
 	if err != nil {
 		return fmt.Errorf("[os.Chdir] %v", err)
