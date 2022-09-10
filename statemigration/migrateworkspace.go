@@ -9,18 +9,28 @@ import (
 
 // MigrateAllWorkspaces runs migrations for all workspaces by coordinating calls to MigrateWorkspace.
 func (sm *stateMigrator) MigrateAllWorkspaces() error {
+	fmt.Println("Beginning to create all workspace variable files.")
+	err := sm.tfVar.CreateAllWorkspaceVarsFiles()
+
+	if err != nil {
+		return fmt.Errorf("[sm.tfVar.CreateAllWorkspaceVarsFiles] %v", err)
+	}
+	fmt.Println("Done creating workspace variable files.")
+
 	for _, directory := range sm.config.WorkspaceToDirectory {
 		if directory == "null" {
 			continue
 		}
 
-		err := sm.MigrateWorkspace(WorkspaceDirectory(directory))
+		fmt.Printf("Beginning to migrate the directory %v\n", directory)
+		err = sm.MigrateWorkspace(WorkspaceDirectory(directory))
 		if err != nil {
 			return fmt.Errorf("[sm.MigrateWorkspace] Error migrating %v workspace: %v", directory, err)
 		}
-
+		fmt.Printf("Done migrating the directory %v\n", directory)
 	}
 
+	fmt.Println("Done migrating all workspaces.")
 	return nil
 }
 
