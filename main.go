@@ -8,14 +8,11 @@ import (
 )
 
 func main() {
-	// TODO: Refactor configuration to occur within the NewStateMigrator call itself
-	config, err := statemigration.NewConfig()
+	stateMigrator, err := statemigration.NewStateMigrator()
 	if err != nil {
-		fmt.Printf("error loading action configuration: %v", err)
+		fmt.Printf("error in statemigration.NewStateMigrator(config): %v", err)
 		os.Exit(1)
 	}
-
-	stateMigrator := statemigration.NewStateMigrator(config)
 
 	err = stateMigrator.MigrateAllWorkspaces()
 

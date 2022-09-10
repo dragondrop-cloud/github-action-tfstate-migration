@@ -8,6 +8,13 @@ import (
 
 // Config contains environment variables needed to run StateMigrator methods.
 type Config struct {
+
+	// TerraformCloudOrganization is the name of the terraform cloud organization where state is maintained.
+	TerraformCloudOrganization string `required:"true"`
+
+	// TerraformCloudToken is a token to access terraform cloud remote state.
+	TerraformCloudToken string `required:"true"`
+
 	// IsApply is a Boolean of whether to run `tfmigrate apply` ("true") or
 	// `tfmigrate plan` ("false") for the migrations.
 	IsApply bool `required:"true"`
@@ -17,6 +24,7 @@ type Config struct {
 	WorkspaceToDirectory map[string]string `required:"true"`
 }
 
+// NewConfig instantiates a new instance of the Config struct.
 func NewConfig() (*Config, error) {
 	var c Config
 	err := envconfig.Process("", &c)

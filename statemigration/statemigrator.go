@@ -1,5 +1,7 @@
 package statemigration
 
+import "fmt"
+
 // WorkspaceDirectory is a relative path to a directory that corresponds to a single Terraform workspace.
 type WorkspaceDirectory string
 
@@ -21,8 +23,13 @@ type stateMigrator struct {
 }
 
 // NewStateMigrator instantiates a new implementation of the StateMigrator interface.
-func NewStateMigrator(conf *Config) StateMigrator {
+func NewStateMigrator() (StateMigrator, error) {
+	conf, err := NewConfig()
+	if err != nil {
+		return nil, fmt.Errorf("[NewConfig] %v", err)
+	}
+
 	return &stateMigrator{
 		config: conf,
-	}
+	}, nil
 }
