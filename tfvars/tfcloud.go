@@ -50,7 +50,7 @@ func (tfc *tfCloud) CreateAllWorkspaceVarsFiles() error {
 			)
 		}
 		fmt.Printf(
-			"Done pulling down workspace variables for workspace: %v", workspace,
+			"Done pulling down workspace variables for workspace: %v\n", workspace,
 		)
 	}
 	return nil
