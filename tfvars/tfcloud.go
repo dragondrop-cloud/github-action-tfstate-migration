@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"sort"
 	"strconv"
 
 	"github.com/Jeffail/gabs/v2"
@@ -383,8 +384,17 @@ func (tfc *tfCloud) generateTFVarsFile(
 	f := hclwrite.NewEmptyFile()
 	body := f.Body()
 
-	for k, v := range workspaceCompleteVariableMap {
-		body.SetAttributeValue(k, cty.StringVal(v))
+	allKeys := []string{}
+
+	for k := range workspaceCompleteVariableMap {
+		allKeys = append(allKeys, k)
+	}
+
+	// This sorting is helpful for cleaner output and allows unit tests to be deterministic.
+	sort.Strings(allKeys)
+
+	for _, k := range allKeys {
+		body.SetAttributeValue(k, cty.StringVal(workspaceCompleteVariableMap[k]))
 	}
 
 	return f.Bytes(), nil
