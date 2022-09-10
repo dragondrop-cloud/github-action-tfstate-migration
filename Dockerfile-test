@@ -43,4 +43,16 @@ COPY . .
 
 RUN go install
 
+ARG IsApply
+ENV ISAPPLY=$IsApply
+
+ARG TerraformCloudToken
+ENV TERRAFORMCLOUDTOKEN=$TerraformCloudToken
+
+ARG TerraformCloudOrganization
+ENV TERRAFORMCLOUDORGANIZATION=$TerraformCloudOrganization
+
+ARG WorkspaceToDirectory
+ENV WORKSPACETODIRECTORY=$WorkspaceToDirectory
+
 ENTRYPOINT ["/go/bin/github-action-tfstate-migration"]
