@@ -38,6 +38,7 @@ func (tfc *tfCloud) CreateAllWorkspaceVarsFiles() error {
 	if err != nil {
 		return fmt.Errorf("[tfc.getVarSetVarsByWorkspace] %v", err)
 	}
+	fmt.Println("Done pulling down workspace variables from variable sets.")
 
 	for workspace := range tfc.config.WorkspaceToDirectory {
 		err = tfc.PullWorkspaceVariables(ctx, workspace, workspaceToVarSetVars)
@@ -48,6 +49,9 @@ func (tfc *tfCloud) CreateAllWorkspaceVarsFiles() error {
 				err,
 			)
 		}
+		fmt.Printf(
+			"Done pulling down workspace variables for workspace: %v", workspace,
+		)
 	}
 	return nil
 }
