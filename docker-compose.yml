@@ -10,4 +10,4 @@ services:
       - "ISAPPLY=false"
       - "TERRAFORMCLOUDTOKEN=null"
       - "TERRAFORMCLOUDORGANIZATION=null"
-      - "WORKSPACETOIRECTORY=null"
+      - "WORKSPACETODIRECTORY=key:null"

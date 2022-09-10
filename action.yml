@@ -26,7 +26,7 @@ runs:
   image: "Dockerfile"
   env:
     TERRAFORM_VERSION: ${{ inputs.terraform-version }}
-    IsApply: ${{ inputs.is-apply }}
-    TerraformCloudOrganization: ${{ inputs.terraform-cloud-organization }}
-    TerraformCloudToken: ${{ inputs.terraform-cloud-token }}
-    WorkspaceToDirectory: ${{ inputs.workspace-directories }}
+    ISAPPLY: ${{ inputs.is-apply }}
+    TERRAFORMCLOUDORGANIZATION: ${{ inputs.terraform-cloud-organization }}
+    TERRAFORMCLOUDTOKEN: ${{ inputs.terraform-cloud-token }}
+    WORKSPACETODIRECTORY: ${{ inputs.workspace-directories }}
