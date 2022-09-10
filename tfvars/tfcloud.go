@@ -29,6 +29,11 @@ type tfCloud struct {
 func (tfc *tfCloud) CreateAllWorkspaceVarsFiles() error {
 	ctx := context.Background()
 
+	if tfc.config.TerraformCloudToken == "null" {
+		fmt.Println("Job kicked off in test-mode (TerraformCloudToken == 'null').")
+		return nil
+	}
+
 	workspaceToVarSetVars, err := tfc.getWorkspaceToVarSetVars()
 	if err != nil {
 		return fmt.Errorf("[tfc.getVarSetVarsByWorkspace] %v", err)
