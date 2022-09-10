@@ -8,6 +8,12 @@ inputs:
     description: "Boolean representing whether the job should run statemigration or just check to see if they are valid."
     required: true
     default: "false"
+  terraform-cloud-organization:
+    description: "Name of the terraform cloud organization containing state information."
+    required: true
+  terraform-cloud-token:
+    description: "Terraform cloud access token corresponding to the Terraform Cloud organization above."
+    required: true
   terraform-version:
     description: "Version of terraform to use for running the statemigration."
     required: true
@@ -20,5 +26,7 @@ runs:
   image: "Dockerfile"
   env:
     TERRAFORM_VERSION: ${{ inputs.terraform-version }}
-    ISAPPLY: ${{ inputs.is-apply }}
-    WORKSPACETODIRECTORY: ${{ inputs.workspace-directories }}
+    IsApply: ${{ inputs.is-apply }}
+    TerraformCloudOrganization: ${{ inputs.terraform-cloud-organization }}
+    TerraformCloudToken: ${{ inputs.terraform-cloud-token }}
+    WorkspaceToDirectory: ${{ inputs.workspace-directories }}
