@@ -37,6 +37,12 @@ jobs:
   test-go-binary:
     runs-on: ubuntu-latest
 
+    env:
+      TerraformCloudToken: ${{ secrets.TERRAFORM_CLOUD_TOKEN }}
+      TerraformCloudOrganization: ${{ secrets.TERRAFORM_CLOUD_ORGANIZATION }}
+      TerraformCloudVarSetID: ${{ secrets.TERRAFORM_CLOUD_VAR_SET_ID }}
+      TerraformCloudWorkspaceID: ${{ secrets.TERRAFORM_CLOUD_WORKSPACE_ID }}
+
     timeout-minutes: 3
     steps:
       - name: Checkout branch

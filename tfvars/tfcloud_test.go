@@ -93,9 +93,9 @@ func TestGenerateTFVarsFile(t *testing.T) {
 	tfc := CreateTFC(t)
 	byteArray, _ := tfc.generateTFVarsFile(inputWorkspaceVars, inputWorkspaceVarSetVars)
 
-	expectedOutput := `var_2 = "val_2"
+	expectedOutput := `var_1 = "val_1"
+var_2 = "val_2"
 var_3 = "val_3"
-var_1 = "val_1"
 `
 
 	if expectedOutput != string(byteArray) {
@@ -147,7 +147,7 @@ func TestGetWorkspaceToVarSetVars(t *testing.T) {
 func TestGetWorkspaceVariables(t *testing.T) {
 	tfc := CreateTFC(t)
 
-	output, err := tfc.getWorkspaceVariables(context.Background(), os.Getenv("workspaceID"))
+	output, err := tfc.getWorkspaceVariables(context.Background(), os.Getenv("TerraformCloudWorkspaceID"))
 
 	if err != nil {
 		t.Errorf("[tfc.getWorkspaceVariables] unexpected error: %v", err)
@@ -161,7 +161,7 @@ func TestGetWorkspaceVariables(t *testing.T) {
 func TestGetVarSetVars(t *testing.T) {
 	tfc := CreateTFC(t)
 
-	output, err := tfc.getVarSetVars([]string{os.Getenv("VarSetID")})
+	output, err := tfc.getVarSetVars([]string{os.Getenv("TerraformCloudVarSetID")})
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
