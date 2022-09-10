@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/kelseyhightower/envconfig"
 )
@@ -51,6 +52,12 @@ func NewTFVars() (TFVars, error) {
 	conf, err := NewConfig()
 	if err != nil {
 		return nil, fmt.Errorf("[NewConfig] %v", err)
+	}
+
+	// This allows the terraform command to make calls to Terraform Cloud
+	err = os.Setenv("TF_TOKEN_app_terraform_io", conf.TerraformCloudOrganization)
+	if err != nil {
+		return nil, fmt.Errorf("[os.Setenv] %v", err)
 	}
 
 	return &tfCloud{
