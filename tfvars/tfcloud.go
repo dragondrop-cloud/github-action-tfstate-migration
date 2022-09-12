@@ -306,8 +306,10 @@ func (tfc *tfCloud) PullWorkspaceVariables(
 		return fmt.Errorf("[tfc.generateTFVarsFile] %v", err)
 	}
 
-	// TODO: Testing the new file path write out
-	fileName := fmt.Sprintf("/github/workspace%vterraform.tfvars", tfc.config.WorkspaceToDirectory[workspaceName])
+	fileName := fmt.Sprintf(
+		"/github/workspace%vterraform.tfvars",
+		tfc.config.WorkspaceToDirectory[workspaceName],
+	)
 	err = os.WriteFile(fileName, tfVarsFile, 0400)
 	if err != nil {
 		return fmt.Errorf("[os.WriteFile] %v", err)
