@@ -55,7 +55,7 @@ func NewTFVars() (TFVars, error) {
 	}
 
 	// This allows the terraform command to make calls to Terraform Cloud
-	err = os.Setenv("TF_TOKEN_app_terraform_io", conf.TerraformCloudOrganization)
+	err = os.Setenv("TF_TOKEN_app_terraform_io", conf.TerraformCloudToken)
 	if err != nil {
 		return nil, fmt.Errorf("[os.Setenv] %v", err)
 	}
