@@ -3,6 +3,7 @@ package statemigration
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 )
@@ -41,6 +42,15 @@ func (sm *stateMigrator) MigrateWorkspace(w WorkspaceDirectory) error {
 	err := os.Chdir(fmt.Sprintf("/github/workspace%v", string(w)))
 	if err != nil {
 		return fmt.Errorf("[os.Chdir] %v", err)
+	}
+	// TODO: printing out all files in current directory for debugging
+	files, err := os.ReadDir(".")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, f := range files {
+		fmt.Println(f.Name())
 	}
 
 	terraformInitArgs := []string{"init"}
