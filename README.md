@@ -4,86 +4,97 @@ A GitHub Action for running dragondrop-built state migrations.
 ## Example Usage
 ### Migrations with history stored in s3
 ```yaml
+name: infrastructure migration
+on: push
+
 jobs:
   new-resource-migration:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+
+    permissions:
+      contents: "read"
+      id-token: "write"
+
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
     steps:
       - name: Checkout branch
         uses: actions/checkout@v3
 
       - name: Plan Migration of Remote State
-        uses: dragondrop-cloud/github-action-tfstate-migration
-        if: ${{ github.ref_name != 'dev'}}
+        uses: "dragondrop-cloud/github-action-tfstate-migration@latest"
+        if: ${{ github.ref_name != 'dev' && github.ref_name != 'prod'}}
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           is-apply: false
+          terraform-cloud-organization: ${{ secrets.TERRAFORM_CLOUD_ORG }}
+          terraform-cloud-token: ${{ secrets.TERRAFORM_CLOUD_API_TOKEN }}
           terraform-version: "1.2.6"
-          workspace-directories: "my/relative/directory/1,my/relative/directory/2"
+          workspace-to-directories: "workspace_1:/my/relative/directory/1/,workspace_2:/my/relative/directory/2/"
 
-      - name: Apply Migration of Remote State
-        uses: dragondrop-cloud/github-action-tfstate-migration
+      - name: Apply Migrations to Remote State
+        uses: dragondrop-cloud/github-action-tfstate-migration@latest
         if: ${{ github.ref_name == 'dev'}}
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           is-apply: true
+          terraform-cloud-organization: ${{ secrets.TERRAFORM_CLOUD_ORG }}
+          terraform-cloud-token: ${{ secrets.TERRAFORM_CLOUD_API_TOKEN }}
           terraform-version: "1.2.6"
-          workspace-directories: "my/relative/directory/1,my/relative/directory/2"
+          workspace-to-directories: "workspace_1:/my/relative/directory/1/,workspace_2:/my/relative/directory/2/"
 ```
 
 ### Migrations with history stored in GCP
 ```yaml
+name: infrastructure migration
+on: push
+
 jobs:
   new-resource-migration:
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
+    permissions:
+      contents: "read"
+      id-token: "write"
+      
     steps:
       - name: Checkout branch
         uses: actions/checkout@v3
 
-      - id: auth
-        name: Authenticate to Google Cloud
+      - name: Authenticate to Google Cloud
+        id: auth
         uses: google-github-actions/auth@v0
         with:
+          token_format: "access_token"
           create_credentials_file: 'true'
           export_environment_variables: 'true'
-          service_account: 'my-service-account@my-project.iam.gserviceaccount.com'
-          workload_identity_provider: 'projects/my-project-id/locations/global/workloadIdentityPools/my-workload-identity-pool/providers/my-provider'
+          service_account: 'my-service-account-name@my-gcp-project.iam.gserviceaccount.com'
+          workload_identity_provider: 'projects/8675309/locations/global/workloadIdentityPools/my-workload-id-pool/providers/my-provider'
 
       - name: Plan Migration of Remote State
-        uses: dragondrop-cloud/github-action-tfstate-migration
-        if: ${{ github.ref_name == 'dev'}}
+        uses: "dragondrop-cloud/github-action-tfstate-migration@latest"
+        if: ${{ github.ref_name != 'dev' && github.ref_name != 'prod'}}
         with:
-          google-application-credentials: ${{ auth.GOOGLE_APPLICATION_CREDENTIALS }}
           is-apply: false
+          terraform-cloud-organization: ${{ secrets.TERRAFORM_CLOUD_ORG }}
+          terraform-cloud-token: ${{ secrets.TERRAFORM_CLOUD_TOKEN }}
           terraform-version: "1.2.6"
-          workspace-directories: "my/relative/directory/1,my/relative/directory/2"
+          workspace-to-directories: "workspace_1:/my/relative/directory/1/,workspace_2:/my/relative/directory/2/"
 
       - name: Apply Migration of Remote State
-        uses: dragondrop-cloud/github-action-tfstate-migration
-        if: ${{ github.ref_name == 'prod'}}
+        uses: dragondrop-cloud/github-action-tfstate-migration@latest
+        if: ${{ github.ref_name == 'dev'}}
         with:
-          google-application-credentials: ${{ auth.GOOGLE_APPLICATION_CREDENTIALS }}
           is-apply: true
+          terraform-cloud-organization: ${{ secrets.TERRAFORM_CLOUD_ORG }}
+          terraform-cloud-token: ${{ secrets.TERRAFORM_CLOUD_TOKEN }}
           terraform-version: "1.2.6"
-          workspace-directories: "my/relative/directory/1,my/relative/directory/2"
+          workspace-to-directories: "workspace_1:/my/relative/directory/1/,workspace_2:/my/relative/directory/2/"
 ```
 
-
 ## Inputs
-
-### `aws-access-key-id`
-AWS_ACCESS_KEY_ID, used for authentication with AWS services.
-
-### `aws-secret-access-key`
-AWS_SECRET_ACCESS_KEY, used for authentication with AWS services.
-
-### `google-application-credentials`
-GOOGLE_APPLICATION_CREDENTIALS, used for authentication with GCP services.
 
 ### `is-apply`
 **Required** Whether to attempt to apply migration statements
@@ -91,16 +102,21 @@ found by the action. If `"false"`, will only run a "plan" if the migrations will
 
 Defaults to `"false"`. 
 
+### `terraform-cloud-organization`
+**Required** Name of the Terraform Cloud organization against which migrations are to be run. 
+
+### `terraform-cloud-token`
+**Required** Terraform Cloud API token with access to the specified `terraform-cloud-organization`.
+
 ### `terraform-version`
 **Required** The Terraform version to use within the job.
 
 Defaults to `"latest"`
 
-### `workspace-directories`
-**Required** A list of relative directory paths within the repo,
-each one of which is associated with its own Terraform workspace.
+### `workspace-to-directories`
+**Required** A map between workspace names and the relative path to that workspace's terraform definition.
 
-Example: `"path/to/workspace/1,path/to/workspace/2,path/to/workspace/3"`
+Example: `"workspace_1:/my/relative/directory/1/,workspace_2:/my/relative/directory/2/"`
 
 There is no default value for this input.
 
