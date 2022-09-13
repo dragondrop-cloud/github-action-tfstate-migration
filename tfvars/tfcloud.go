@@ -407,7 +407,12 @@ func (tfc *tfCloud) generateTFVarsFile(
 	sort.Strings(allKeys)
 
 	for _, k := range allKeys {
-		body.SetAttributeValue(k, cty.StringVal(workspaceCompleteVariableMap[k]))
+		switch k {
+		case tfc.config.TerraformCloudVariableName:
+			body.SetAttributeValue(k, cty.StringVal(tfc.config.TerraformCloudToken))
+		default:
+			body.SetAttributeValue(k, cty.StringVal(workspaceCompleteVariableMap[k]))
+		}
 	}
 
 	return f.Bytes(), nil

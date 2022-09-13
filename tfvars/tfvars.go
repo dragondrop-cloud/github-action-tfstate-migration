@@ -25,10 +25,14 @@ type TFVars interface {
 type Config struct {
 
 	// TerraformCloudOrganization is the name of the Terraform Cloud organization
-	TerraformCloudOrganization string `required:"false"`
+	TerraformCloudOrganization string `required:"true"`
 
 	// TerraformCloudToken is a Terraform Cloud Token
 	TerraformCloudToken string `required:"true"`
+
+	// TerraformCloudVariableName is the variable name that is associated with a
+	// Terraform Cloud Token in Terraform configuration
+	TerraformCloudVariableName string `required:"false"`
 
 	// WorkspaceToDirectory is a map between workspace name and the relative directory for a workspace's
 	// configuration.
