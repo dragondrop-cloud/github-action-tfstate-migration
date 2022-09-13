@@ -23,6 +23,7 @@ func CreateTFC(t *testing.T) tfCloud {
 
 	tfc := tfCloud{
 		config: &Config{
+			TerraformCloudVariableName: "tfe_token",
 			TerraformCloudToken:        os.Getenv("TerraformCloudToken"),
 			TerraformCloudOrganization: os.Getenv("TerraformCloudOrganization"),
 			WorkspaceToDirectory:       map[string]string{"google-backend-api-dev": "/"},
@@ -100,6 +101,27 @@ var_3 = "val_3"
 
 	if expectedOutput != string(byteArray) {
 		t.Errorf("got:\n%v\nexpected:\n%v",
+			strconv.Quote(string(byteArray)),
+			expectedOutput)
+	}
+
+	// Testing that the value for tfe_token gets replaced correctly
+	inputWorkspaceVars = VariableMap{
+		"var_1":     "val_1",
+		"var_2":     "val_2",
+		"tfe_token": "value_to_replace",
+	}
+
+	byteArray, _ = tfc.generateTFVarsFile(inputWorkspaceVars, inputWorkspaceVarSetVars)
+
+	expectedNotOutput := `tfe_token = "value_to_replace"
+var_1 = "val_1"
+var_2 = "val_2"
+var_3 = "val_3"
+`
+
+	if string(byteArray) == expectedNotOutput {
+		t.Errorf("got:\n%v\nexpected value not to be:\n%v",
 			strconv.Quote(string(byteArray)),
 			expectedOutput)
 	}

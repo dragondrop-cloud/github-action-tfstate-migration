@@ -14,6 +14,9 @@ inputs:
   terraform-cloud-token:
     description: "Terraform cloud access token corresponding to the Terraform Cloud organization above."
     required: true
+  terraform-cloud-variable-name:
+    description: "Terraform cloud variable name within Terraform definitions."
+    required: false
   terraform-version:
     description: "Version of terraform to use for running the statemigration."
     required: true
@@ -29,4 +32,5 @@ runs:
     ISAPPLY: ${{ inputs.is-apply }}
     TERRAFORMCLOUDORGANIZATION: ${{ inputs.terraform-cloud-organization }}
     TERRAFORMCLOUDTOKEN: ${{ inputs.terraform-cloud-token }}
+    TERRAFORMCLOUDVARIABLENAME: ${{ inputs.terraform-cloud-variable-name }}
     WORKSPACETODIRECTORY: ${{ inputs.workspace-to-directories }}
