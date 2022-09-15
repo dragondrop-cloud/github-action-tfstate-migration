@@ -400,14 +400,60 @@ func (tfc *tfCloud) extractWorkspaceVars(workspaceResponse []byte) (VariableMap,
 	return outputVarMap, nil
 }
 
-// TODO: implement and unit test
 // createWorkspaceSensitiveVars produces collections of sensitive workspace variables.
 func (tfc *tfCloud) createWorkspaceSensitiveVars(
 	workspaceName string,
 	workspaceToVarSetIDs map[string]map[string]bool,
 ) (VariableMap, VariableMap, error) {
+	allVariablesEnv := VariableMap{}
+	allVariablesTerraform := VariableMap{}
 
-	return nil, nil, nil
+	for varSetID, _ := range workspaceToVarSetIDs[workspaceName] {
+		if _, ok := tfc.config.TerraformVarSetSensitiveVars[varSetID]; !ok {
+			continue
+		}
+		currentVarSetSensitiveVars := tfc.config.TerraformVarSetSensitiveVars[varSetID]
+		currentVarMapEnv, currentVarMapTerraform, err := tfc.variablesToVariableMaps(currentVarSetSensitiveVars)
+		if err != nil {
+			return nil, nil, fmt.Errorf("[tfc.variablesToVariableMaps] %v", err)
+		}
+
+		allVariablesTerraform = allVariablesTerraform.Merge(currentVarMapTerraform)
+		allVariablesEnv = allVariablesEnv.Merge(currentVarMapEnv)
+	}
+
+	workspaceSensitiveVars := tfc.config.TerraformWorkspaceSensitiveVars[workspaceName]
+	workspaceVarMapEnv, workspaceVarMapTerraform, err := tfc.variablesToVariableMaps(workspaceSensitiveVars)
+	if err != nil {
+		return nil, nil, fmt.Errorf("[tfc.variablesToVariableMaps] %v", err)
+	}
+	allVariablesEnv = allVariablesEnv.Merge(workspaceVarMapEnv)
+	allVariablesTerraform = allVariablesTerraform.Merge(workspaceVarMapTerraform)
+
+	return allVariablesEnv, allVariablesTerraform, nil
+}
+
+// variablesToVariableMaps converts a sensitive variables object to two VariableMaps,
+// one for variables to be used within terraform and others for environment variables
+func (tfc *tfCloud) variablesToVariableMaps(vars Variables) (VariableMap, VariableMap, error) {
+	varMapEnv := VariableMap{}
+	varMapTerraform := VariableMap{}
+
+	for varKey, varData := range vars {
+		switch varData.category {
+		case "env":
+			varMapEnv[varKey] = varData.value
+		case "terraform":
+			varMapTerraform[varKey] = varData.value
+		default:
+			return nil, nil, fmt.Errorf(
+				"sensitive variables must have a category of either `env` or `terraform`, got: %v",
+				varData.value,
+			)
+		}
+	}
+
+	return varMapEnv, varMapTerraform, nil
 }
 
 // TODO: include sensitive variables from configuration and update unit tests
