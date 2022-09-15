@@ -34,14 +34,14 @@ func (tfc *tfCloud) CreateAllWorkspaceVarsFiles() error {
 		return nil
 	}
 
-	workspaceToVarSetVars, err := tfc.getWorkspaceToVarSetVars()
+	workspaceToVarSetIDs, workspaceToVarSetVars, err := tfc.getWorkspaceToVarSetVars()
 	if err != nil {
 		return fmt.Errorf("[tfc.getVarSetVarsByWorkspace] %v", err)
 	}
 	fmt.Println("Done pulling down workspace variables from variable sets.")
 
 	for workspace := range tfc.config.WorkspaceToDirectory {
-		err = tfc.PullWorkspaceVariables(ctx, workspace, workspaceToVarSetVars)
+		err = tfc.PullWorkspaceVariables(ctx, workspace, workspaceToVarSetVars, workspaceToVarSetIDs)
 		if err != nil {
 			return fmt.Errorf(
 				"[tfc.PullWorkspaceVariables] Error in workspace %v: %v",
@@ -58,28 +58,28 @@ func (tfc *tfCloud) CreateAllWorkspaceVarsFiles() error {
 
 // getWorkspaceToVarSetVars produces a map between a workspace name and variables associated
 // with that workspace from variable sets.
-func (tfc *tfCloud) getWorkspaceToVarSetVars() (map[string]VariableMap, error) {
+func (tfc *tfCloud) getWorkspaceToVarSetVars() (map[string]map[string]bool, map[string]VariableMap, error) {
 	varSetIDs, err := tfc.getVarSetIdsForOrg()
 	if err != nil {
-		return nil, fmt.Errorf("[tfc.getVarSetIdsForOrg] %v", err)
+		return nil, nil, fmt.Errorf("[tfc.getVarSetIdsForOrg] %v", err)
 	}
 
 	varSetVars, err := tfc.getVarSetVars(varSetIDs)
 	if err != nil {
-		return nil, fmt.Errorf("[tfc.getVarSetVars] %v", err)
+		return nil, nil, fmt.Errorf("[tfc.getVarSetVars] %v", err)
 	}
 
 	workspaceToVarSetIDs, err := tfc.getWorkspaceToVarSetIDs()
 	if err != nil {
-		return nil, fmt.Errorf("[tfc.getWorkspaceToVarSetIDs] %v", err)
+		return nil, nil, fmt.Errorf("[tfc.getWorkspaceToVarSetIDs] %v", err)
 	}
 
 	workspaceToVarSetVars, err := tfc.createWorkspaceToVarSetVars(varSetVars, workspaceToVarSetIDs)
 	if err != nil {
-		return nil, fmt.Errorf("[tfc.getWorkspaceToVarSetVars] %v", err)
+		return nil, nil, fmt.Errorf("[tfc.getWorkspaceToVarSetVars] %v", err)
 	}
 
-	return workspaceToVarSetVars, nil
+	return workspaceToVarSetIDs, workspaceToVarSetVars, nil
 }
 
 // getVarSetIdsForOrg returns a map between var set ids and the set of corresponding workspace ids.
@@ -288,6 +288,7 @@ func (tfc *tfCloud) PullWorkspaceVariables(
 	ctx context.Context,
 	workspaceName string,
 	workspaceToVarSetVars map[string]VariableMap,
+	workspaceToVarSetIDs map[string]map[string]bool,
 ) error {
 	workspaceVarsContainer, err := tfc.DownloadWorkspaceVariables(ctx, workspaceName)
 	if err != nil {
@@ -299,11 +300,26 @@ func (tfc *tfCloud) PullWorkspaceVariables(
 		return fmt.Errorf("[tfc.parseWorkspaceVars] %v", err)
 	}
 
+	// TODO: New function consolidating workspace sensitive variables
+	workspaceSensitiveVarsMap, workspaceSensitiveEnvMap, err := tfc.createWorkspaceSensitiveVars(
+		workspaceName, workspaceToVarSetIDs,
+	)
+	if err != nil {
+		return fmt.Errorf("[tfc.workspaceSensitiveVars] %v", err)
+	}
+
+	// TODO: Update function and unit tests
 	tfVarsFile, err := tfc.generateTFVarsFile(
-		workspaceVarsMap, workspaceToVarSetVars[workspaceName],
+		workspaceVarsMap, workspaceToVarSetVars[workspaceName], workspaceSensitiveVarsMap,
 	)
 	if err != nil {
 		return fmt.Errorf("[tfc.generateTFVarsFile] %v", err)
+	}
+
+	// TODO: Implement and unit test
+	err = tfc.updateEnvironmentVariables(workspaceSensitiveEnvMap)
+	if err != nil {
+		return fmt.Errorf("[tfc.updateEnvironmentVariables] %v", err)
 	}
 
 	fileName := fmt.Sprintf(
@@ -384,16 +400,30 @@ func (tfc *tfCloud) extractWorkspaceVars(workspaceResponse []byte) (VariableMap,
 	return outputVarMap, nil
 }
 
+// TODO: implement and unit test
+// createWorkspaceSensitiveVars produces collections of sensitive workspace variables.
+func (tfc *tfCloud) createWorkspaceSensitiveVars(
+	workspaceName string,
+	workspaceToVarSetIDs map[string]map[string]bool,
+) (VariableMap, VariableMap, error) {
+
+	return nil, nil, nil
+}
+
+// TODO: include sensitive variables from configuration and update unit tests
 // generateTFVarsFile aggregates varset variables and workspace-specific variables to create a
 // .tfvars file for the current workspace.
 func (tfc *tfCloud) generateTFVarsFile(
 	workspaceVars VariableMap,
 	workspaceVarSetVars VariableMap,
+	workspaceSensitiveVars VariableMap,
 ) ([]byte, error) {
 	// workspace variables assigned to the variable itself has priority in Terraform cloud,
 	// which is reflected here
 	workspaceCompleteVariableMap := workspaceVarSetVars.Merge(workspaceVars)
 
+	// TODO: for each variable, if the value is sensitive, fill in from generated sensitive variable map
+	// TODO: very possible another helper function
 	f := hclwrite.NewEmptyFile()
 	body := f.Body()
 
@@ -416,6 +446,12 @@ func (tfc *tfCloud) generateTFVarsFile(
 	}
 
 	return f.Bytes(), nil
+}
+
+// TODO: Implement and unit test
+// updateEnvironmentVariables
+func (tfc *tfCloud) updateEnvironmentVariables(workspaceSensitiveEnvMap VariableMap) error {
+	return nil
 }
 
 // getWorkspaceID calls the Terraform Cloud API and gets the workspace ID for the
