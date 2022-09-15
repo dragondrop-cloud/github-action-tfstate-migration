@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-
-	"github.com/kelseyhightower/envconfig"
 )
 
 // TFVars is an interface that allows for the extraction of
@@ -19,36 +17,6 @@ type TFVars interface {
 	// CreateAllWorkspaceVarsFiles extracts variables for all workspaces and saves them into
 	// .tfvars files within the appropriate directory.
 	CreateAllWorkspaceVarsFiles() error
-}
-
-// Config contains the variables needed to support the TFVars interface.
-type Config struct {
-
-	// TerraformCloudOrganization is the name of the Terraform Cloud organization
-	TerraformCloudOrganization string `required:"true"`
-
-	// TerraformCloudToken is a Terraform Cloud Token
-	TerraformCloudToken string `required:"true"`
-
-	// TerraformCloudVariableName is the variable name that is associated with a
-	// Terraform Cloud Token in Terraform configuration
-	TerraformCloudVariableName string `required:"false"`
-
-	// WorkspaceToDirectory is a map between workspace name and the relative directory for a workspace's
-	// configuration.
-	WorkspaceToDirectory map[string]string `required:"true"`
-}
-
-// NewConfig instantiates a new instance of Config
-func NewConfig() (*Config, error) {
-	var c Config
-	err := envconfig.Process("", &c)
-
-	if err != nil {
-		return nil, fmt.Errorf("[envconfig.Process] Error loading config: %v", err)
-	}
-
-	return &c, err
 }
 
 // NewTFVars instantiates a new implementation of the tfVars interface.
