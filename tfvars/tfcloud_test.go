@@ -23,7 +23,6 @@ func CreateTFC(t *testing.T) tfCloud {
 
 	tfc := tfCloud{
 		config: &Config{
-			TerraformCloudVariableName: "tfe_token",
 			TerraformCloudToken:        os.Getenv("TerraformCloudToken"),
 			TerraformCloudOrganization: os.Getenv("TerraformCloudOrganization"),
 			TerraformWorkspaceSensitiveVars: GroupToVariables{
@@ -85,13 +84,20 @@ func TestCreateWorkspaceSensitiveVars(t *testing.T) {
 
 	inputWorkspaceToVarSetIDs := map[string]map[string]bool{
 		"workspace_example": {
-			"var_set_1": true,
-			"var_set_2": true,
+			"asdqw123_1": true,
+			"asdqw123_2": true,
 		},
 		"workspace_example_2": {
-			"var_set_3": true,
-			"var_set_4": true,
+			"asdqw123_3": true,
+			"asdqw123_4": true,
 		},
+	}
+
+	inputVarSetIDToName := map[string]string{
+		"asdqw123_1": "var_set_1",
+		"asdqw123_2": "var_set_2",
+		"asdqw123_3": "var_set_3",
+		"asdqw123_4": "var_set_4",
 	}
 
 	expectedEnvVarMap := VariableMap{
@@ -108,6 +114,7 @@ func TestCreateWorkspaceSensitiveVars(t *testing.T) {
 	outputEnvVarMap, outputTerraformVarMap, err := tfc.createWorkspaceSensitiveVars(
 		inputWorkspaceName,
 		inputWorkspaceToVarSetIDs,
+		inputVarSetIDToName,
 	)
 	if err != nil {
 		t.Errorf("unexpected error from tfc.createWorkspaceSensitiveVars")
@@ -120,7 +127,6 @@ func TestCreateWorkspaceSensitiveVars(t *testing.T) {
 	if !reflect.DeepEqual(expectedTerraformVarMap, outputTerraformVarMap) {
 		t.Errorf("got %v, expected %v", outputTerraformVarMap, expectedTerraformVarMap)
 	}
-
 }
 
 func TestCreateWorkspaceToVarSetVars(t *testing.T) {
@@ -258,9 +264,13 @@ func TestGetVarSetIdsForOrg(t *testing.T) {
 func TestGetWorkspaceToVarSetVars(t *testing.T) {
 	tfc := CreateTFC(t)
 
-	workspaceToVarSetIDs, output, err := tfc.getWorkspaceToVarSetVars()
+	workspaceToVarSetIDs, output, varSetIDToName, err := tfc.getWorkspaceToVarSetVars()
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
+	}
+
+	if varSetIDToName == nil {
+		t.Errorf("expected non-nil varSetIDToName from tfc.getWorkspaceToVarSetVars")
 	}
 
 	if workspaceToVarSetIDs == nil {
@@ -289,7 +299,11 @@ func TestGetWorkspaceVariables(t *testing.T) {
 func TestGetVarSetVars(t *testing.T) {
 	tfc := CreateTFC(t)
 
-	output, err := tfc.getVarSetVars([]string{os.Getenv("TerraformCloudVarSetID")})
+	output, err := tfc.getVarSetVars(
+		map[string]string{
+			os.Getenv("TerraformCloudVarSetID"): "filler var set name",
+		},
+	)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -405,14 +419,14 @@ func TestExtractWorkspaceVars(t *testing.T) {
 	}
 }
 
-func TestExtractVarSetIDs(t *testing.T) {
+func TestExtractVarSetIDToName(t *testing.T) {
 	inputResponse := []byte(`{
   "data": [
     {
       "id": "varset-mio9UUFyFMjU33S4",
       "type": "varsets",
       "attributes":  {
-         "name": "varset-b7af6a77",
+         "name": "name_1",
          "workspace-count": 2
       },
       "relationships": {
@@ -436,7 +450,7 @@ func TestExtractVarSetIDs(t *testing.T) {
       "id": "varset-tuyo9UUFyFMjU33S4",
       "type": "varsets",
       "attributes":  {
-         "name": "varset-b7af6a77",
+         "name": "name_2",
          "workspace-count": 2
       },
       "relationships": {
@@ -460,14 +474,14 @@ func TestExtractVarSetIDs(t *testing.T) {
 }
 `)
 
-	expectedOutputMapToSet := []string{
-		"varset-mio9UUFyFMjU33S4",
-		"varset-tuyo9UUFyFMjU33S4",
+	expectedOutputMapToSet := map[string]string{
+		"varset-mio9UUFyFMjU33S4":  "name_1",
+		"varset-tuyo9UUFyFMjU33S4": "name_2",
 	}
 
 	tfc := tfCloud{}
 
-	outputMapToSet, err := tfc.extractVarSetIDs(inputResponse)
+	outputMapToSet, err := tfc.extractVarSetIDToName(inputResponse)
 	if err != err {
 		t.Errorf("unexpected error in tfc.extractVarSetInformation: %v", err)
 	}

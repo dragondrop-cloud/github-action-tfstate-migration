@@ -17,8 +17,6 @@ func (sm *stateMigrator) MigrateAllWorkspaces() error {
 	}
 	fmt.Println("Done creating workspace variable files.")
 
-	fmt.Printf("Workspace to Directory: \n%v\n", sm.config.WorkspaceToDirectory)
-
 	for _, directory := range sm.config.WorkspaceToDirectory {
 		if directory == "null" {
 			continue
