@@ -34,14 +34,14 @@ func (tfc *tfCloud) CreateAllWorkspaceVarsFiles() error {
 		return nil
 	}
 
-	workspaceToVarSetIDs, workspaceToVarSetVars, err := tfc.getWorkspaceToVarSetVars()
+	workspaceToVarSetIDs, workspaceToVarSetVars, varSetIDsToName, err := tfc.getWorkspaceToVarSetVars()
 	if err != nil {
-		return fmt.Errorf("[tfc.getVarSetVarsByWorkspace] %v", err)
+		return fmt.Errorf("[tfc.getWorkspaceToVarSetVars] %v", err)
 	}
 	fmt.Println("Done pulling down workspace variables from variable sets.")
 
 	for workspace := range tfc.config.WorkspaceToDirectory {
-		err = tfc.PullWorkspaceVariables(ctx, workspace, workspaceToVarSetVars, workspaceToVarSetIDs)
+		err = tfc.PullWorkspaceVariables(ctx, workspace, workspaceToVarSetVars, workspaceToVarSetIDs, varSetIDsToName)
 		if err != nil {
 			return fmt.Errorf(
 				"[tfc.PullWorkspaceVariables] Error in workspace %v: %v",
@@ -58,32 +58,32 @@ func (tfc *tfCloud) CreateAllWorkspaceVarsFiles() error {
 
 // getWorkspaceToVarSetVars produces a map between a workspace name and variables associated
 // with that workspace from variable sets.
-func (tfc *tfCloud) getWorkspaceToVarSetVars() (map[string]map[string]bool, map[string]VariableMap, error) {
-	varSetIDs, err := tfc.getVarSetIdsForOrg()
+func (tfc *tfCloud) getWorkspaceToVarSetVars() (map[string]map[string]bool, map[string]VariableMap, map[string]string, error) {
+	varSetIDsToName, err := tfc.getVarSetIdsForOrg()
 	if err != nil {
-		return nil, nil, fmt.Errorf("[tfc.getVarSetIdsForOrg] %v", err)
+		return nil, nil, nil, fmt.Errorf("[tfc.getVarSetIdsForOrg] %v", err)
 	}
 
-	varSetVars, err := tfc.getVarSetVars(varSetIDs)
+	varSetVars, err := tfc.getVarSetVars(varSetIDsToName)
 	if err != nil {
-		return nil, nil, fmt.Errorf("[tfc.getVarSetVars] %v", err)
+		return nil, nil, nil, fmt.Errorf("[tfc.getVarSetVars] %v", err)
 	}
 
 	workspaceToVarSetIDs, err := tfc.getWorkspaceToVarSetIDs()
 	if err != nil {
-		return nil, nil, fmt.Errorf("[tfc.getWorkspaceToVarSetIDs] %v", err)
+		return nil, nil, nil, fmt.Errorf("[tfc.getWorkspaceToVarSetIDs] %v", err)
 	}
 
 	workspaceToVarSetVars, err := tfc.createWorkspaceToVarSetVars(varSetVars, workspaceToVarSetIDs)
 	if err != nil {
-		return nil, nil, fmt.Errorf("[tfc.getWorkspaceToVarSetVars] %v", err)
+		return nil, nil, nil, fmt.Errorf("[tfc.getWorkspaceToVarSetVars] %v", err)
 	}
 
-	return workspaceToVarSetIDs, workspaceToVarSetVars, nil
+	return workspaceToVarSetIDs, workspaceToVarSetVars, varSetIDsToName, nil
 }
 
-// getVarSetIdsForOrg returns a map between var set ids and the set of corresponding workspace ids.
-func (tfc *tfCloud) getVarSetIdsForOrg() ([]string, error) {
+// getVarSetIdsForOrg returns a map between var set ids and the var set's name.
+func (tfc *tfCloud) getVarSetIdsForOrg() (map[string]string, error) {
 	requestPath := fmt.Sprintf(
 		"https://app.terraform.io/api/v2/organizations/%v/varsets",
 		tfc.config.TerraformCloudOrganization,
@@ -104,18 +104,18 @@ func (tfc *tfCloud) getVarSetIdsForOrg() ([]string, error) {
 		return nil, fmt.Errorf("[tfc.buildTFCloudHTTPRequest] %v", err)
 	}
 
-	varSetIds, err := tfc.extractVarSetIDs(response)
+	varSetIdToName, err := tfc.extractVarSetIDToName(response)
 	if err != nil {
 		return nil, fmt.Errorf("[tfc.extractVarSetInformation] %v", err)
 	}
 
-	return varSetIds, nil
+	return varSetIdToName, nil
 }
 
-// extractVarSetIDs extracts variable set ids from a response json
+// extractVarSetIDToName extracts variable set ids from a response json
 // from the Terraform Cloud API.
-func (tfc *tfCloud) extractVarSetIDs(response []byte) ([]string, error) {
-	var varSetIDs []string
+func (tfc *tfCloud) extractVarSetIDToName(response []byte) (map[string]string, error) {
+	varSetIDToName := map[string]string{}
 
 	container, err := gabs.ParseJSON(response)
 	if err != nil {
@@ -125,19 +125,19 @@ func (tfc *tfCloud) extractVarSetIDs(response []byte) ([]string, error) {
 	i := 0
 	for container.Exists("data", strconv.Itoa(i)) {
 		varSetID := container.Search("data", strconv.Itoa(i), "id").Data().(string)
-		varSetIDs = append(varSetIDs, varSetID)
+		varSetIDToName[varSetID] = container.Search("data", strconv.Itoa(i), "attributes", "name").Data().(string)
 		i++
 	}
 
-	return varSetIDs, nil
+	return varSetIDToName, nil
 }
 
 // getVarSetVars pulls down from terraform cloud all variables for each variable set passed in via
 // varSetIDs.
-func (tfc *tfCloud) getVarSetVars(varSetIDs []string) (map[string]VariableMap, error) {
+func (tfc *tfCloud) getVarSetVars(varSetIDsToName map[string]string) (map[string]VariableMap, error) {
 	varSetToVars := map[string]VariableMap{}
 
-	for _, varSetID := range varSetIDs {
+	for varSetID, _ := range varSetIDsToName {
 		requestPath := fmt.Sprintf("https://app.terraform.io/api/v2/varsets/%v/relationships/vars", varSetID)
 
 		httpRequest, err := tfc.buildTFCloudHTTPRequest(
@@ -289,6 +289,7 @@ func (tfc *tfCloud) PullWorkspaceVariables(
 	workspaceName string,
 	workspaceToVarSetVars map[string]VariableMap,
 	workspaceToVarSetIDs map[string]map[string]bool,
+	varSetIDsToName map[string]string,
 ) error {
 	workspaceVarsContainer, err := tfc.DownloadWorkspaceVariables(ctx, workspaceName)
 	if err != nil {
@@ -300,8 +301,8 @@ func (tfc *tfCloud) PullWorkspaceVariables(
 		return fmt.Errorf("[tfc.parseWorkspaceVars] %v", err)
 	}
 
-	workspaceSensitiveVarsMap, workspaceSensitiveEnvMap, err := tfc.createWorkspaceSensitiveVars(
-		workspaceName, workspaceToVarSetIDs,
+	workspaceSensitiveEnvMap, workspaceSensitiveVarsMap, err := tfc.createWorkspaceSensitiveVars(
+		workspaceName, workspaceToVarSetIDs, varSetIDsToName,
 	)
 	if err != nil {
 		return fmt.Errorf("[tfc.workspaceSensitiveVars] %v", err)
@@ -323,9 +324,6 @@ func (tfc *tfCloud) PullWorkspaceVariables(
 		"/github/workspace%vterraform.tfvars",
 		tfc.config.WorkspaceToDirectory[workspaceName],
 	)
-
-	// TODO: Debugging statement:
-	fmt.Println(string(tfVarsFile))
 
 	err = os.WriteFile(fileName, tfVarsFile, 0400)
 	if err != nil {
@@ -404,15 +402,17 @@ func (tfc *tfCloud) extractWorkspaceVars(workspaceResponse []byte) (VariableMap,
 func (tfc *tfCloud) createWorkspaceSensitiveVars(
 	workspaceName string,
 	workspaceToVarSetIDs map[string]map[string]bool,
+	varSetIDToName map[string]string,
 ) (VariableMap, VariableMap, error) {
 	allVariablesEnv := VariableMap{}
 	allVariablesTerraform := VariableMap{}
 
 	for varSetID := range workspaceToVarSetIDs[workspaceName] {
-		if _, ok := tfc.config.TerraformVarSetSensitiveVars[varSetID]; !ok {
+		varSetName := varSetIDToName[varSetID]
+		if _, ok := tfc.config.TerraformVarSetSensitiveVars[varSetName]; !ok {
 			continue
 		}
-		currentVarSetSensitiveVars := tfc.config.TerraformVarSetSensitiveVars[varSetID]
+		currentVarSetSensitiveVars := tfc.config.TerraformVarSetSensitiveVars[varSetName]
 		currentVarMapEnv, currentVarMapTerraform, err := tfc.variablesToVariableMaps(currentVarSetSensitiveVars)
 		if err != nil {
 			return nil, nil, fmt.Errorf("[tfc.variablesToVariableMaps] %v", err)
@@ -429,7 +429,6 @@ func (tfc *tfCloud) createWorkspaceSensitiveVars(
 	}
 	allVariablesEnv = allVariablesEnv.Merge(workspaceVarMapEnv)
 	allVariablesTerraform = allVariablesTerraform.Merge(workspaceVarMapTerraform)
-
 	return allVariablesEnv, allVariablesTerraform, nil
 }
 

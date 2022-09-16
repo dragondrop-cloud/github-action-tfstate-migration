@@ -8,6 +8,8 @@ services:
         TERRAFORM_VERSION: "1.2.4"
     environment:
       - "ISAPPLY=false"
-      - "TERRAFORMCLOUDTOKEN=null"
-      - "TERRAFORMCLOUDORGANIZATION=null"
-      - "WORKSPACETODIRECTORY=key:null"
+      - "TERRAFORMCLOUDTOKEN=$TerraformCloudToken"
+      - "TERRAFORMCLOUDORGANIZATION=$TerraformCloudOrganization"
+      - "TERRAFORMVARSETSENSITIVEVARS=$TerraformVarSetSensitiveVars"
+      - "TERRAFORMWORKSPACESENSITIVEVARS=$TerraformWorkspaceSensitiveVars"
+      - "WORKSPACETODIRECTORY=$WorkspaceToDirectory"
