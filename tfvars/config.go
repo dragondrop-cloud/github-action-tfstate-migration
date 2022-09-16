@@ -100,7 +100,7 @@ func (gtv *GroupToVariables) Decode(value string) error {
 
 			if category != "env" && category != "terraform" {
 				return fmt.Errorf(
-					"category must be either 'env' or 'terraform'. In grouping %v for key %v recieved category of %v",
+					"category must be either 'env' or 'terraform'. In grouping %v for key %v received category of %v",
 					group, varKey, category,
 				)
 			}

@@ -405,7 +405,7 @@ func (tfc *tfCloud) createWorkspaceSensitiveVars(
 	allVariablesEnv := VariableMap{}
 	allVariablesTerraform := VariableMap{}
 
-	for varSetID, _ := range workspaceToVarSetIDs[workspaceName] {
+	for varSetID := range workspaceToVarSetIDs[workspaceName] {
 		if _, ok := tfc.config.TerraformVarSetSensitiveVars[varSetID]; !ok {
 			continue
 		}
