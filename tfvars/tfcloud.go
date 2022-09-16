@@ -300,7 +300,6 @@ func (tfc *tfCloud) PullWorkspaceVariables(
 		return fmt.Errorf("[tfc.parseWorkspaceVars] %v", err)
 	}
 
-	// TODO: New function consolidating workspace sensitive variables
 	workspaceSensitiveVarsMap, workspaceSensitiveEnvMap, err := tfc.createWorkspaceSensitiveVars(
 		workspaceName, workspaceToVarSetIDs,
 	)
@@ -308,7 +307,6 @@ func (tfc *tfCloud) PullWorkspaceVariables(
 		return fmt.Errorf("[tfc.workspaceSensitiveVars] %v", err)
 	}
 
-	// TODO: Update function and unit tests
 	tfVarsFile, err := tfc.generateTFVarsFile(
 		workspaceVarsMap, workspaceToVarSetVars[workspaceName], workspaceSensitiveVarsMap,
 	)
@@ -316,7 +314,6 @@ func (tfc *tfCloud) PullWorkspaceVariables(
 		return fmt.Errorf("[tfc.generateTFVarsFile] %v", err)
 	}
 
-	// TODO: Implement and unit test
 	err = tfc.updateEnvironmentVariables(workspaceSensitiveEnvMap)
 	if err != nil {
 		return fmt.Errorf("[tfc.updateEnvironmentVariables] %v", err)
@@ -456,7 +453,6 @@ func (tfc *tfCloud) variablesToVariableMaps(vars Variables) (VariableMap, Variab
 	return varMapEnv, varMapTerraform, nil
 }
 
-// TODO: include sensitive variables from configuration and update unit tests
 // generateTFVarsFile aggregates varset variables and workspace-specific variables to create a
 // .tfvars file for the current workspace.
 func (tfc *tfCloud) generateTFVarsFile(
@@ -466,10 +462,9 @@ func (tfc *tfCloud) generateTFVarsFile(
 ) ([]byte, error) {
 	// workspace variables assigned to the variable itself has priority in Terraform cloud,
 	// which is reflected here
-	workspaceCompleteVariableMap := workspaceVarSetVars.Merge(workspaceVars)
+	workspaceVariableMap := workspaceVarSetVars.Merge(workspaceVars)
+	workspaceCompleteVariableMap := workspaceVariableMap.Merge(workspaceSensitiveVars)
 
-	// TODO: for each variable, if the value is sensitive, fill in from generated sensitive variable map
-	// TODO: very possible another helper function
 	f := hclwrite.NewEmptyFile()
 	body := f.Body()
 
@@ -483,6 +478,12 @@ func (tfc *tfCloud) generateTFVarsFile(
 	sort.Strings(allKeys)
 
 	for _, k := range allKeys {
+		if workspaceCompleteVariableMap[k] == "null" {
+			fmt.Printf(
+				"null value has been specified for variable %v - this variable might need to be specified as a sensitive variable",
+				k,
+			)
+		}
 		switch k {
 		case tfc.config.TerraformCloudVariableName:
 			body.SetAttributeValue(k, cty.StringVal(tfc.config.TerraformCloudToken))
@@ -494,9 +495,14 @@ func (tfc *tfCloud) generateTFVarsFile(
 	return f.Bytes(), nil
 }
 
-// TODO: Implement and unit test
 // updateEnvironmentVariables
 func (tfc *tfCloud) updateEnvironmentVariables(workspaceSensitiveEnvMap VariableMap) error {
+	for k, v := range workspaceSensitiveEnvMap {
+		err := os.Setenv(k, v)
+		if err != nil {
+			return fmt.Errorf("[os.Setenv] %v", err)
+		}
+	}
 	return nil
 }
 

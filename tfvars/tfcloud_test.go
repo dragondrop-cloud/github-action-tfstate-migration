@@ -22,7 +22,6 @@ func CreateTFC(t *testing.T) tfCloud {
 	}
 
 	tfc := tfCloud{
-		// TODO: Need to update the Config specification here
 		config: &Config{
 			TerraformCloudVariableName: "tfe_token",
 			TerraformCloudToken:        os.Getenv("TerraformCloudToken"),
@@ -101,8 +100,9 @@ func TestCreateWorkspaceSensitiveVars(t *testing.T) {
 	}
 
 	expectedTerraformVarMap := VariableMap{
-		"key_2": "val_2",
-		"key_3": "val_3",
+		"key_2":   "val_2",
+		"key_3":   "val_3",
+		"key_xyz": "val_2",
 	}
 
 	outputEnvVarMap, outputTerraformVarMap, err := tfc.createWorkspaceSensitiveVars(
@@ -169,32 +169,40 @@ func TestCreateWorkspaceToVarSetVars(t *testing.T) {
 	}
 }
 
-// TODO: This unit test needs to be updated
 func TestGenerateTFVarsFile(t *testing.T) {
 	inputWorkspaceVars := VariableMap{
-		"var_1": "val_1",
-		"var_2": "val_2",
+		"var_1":  "val_1",
+		"var_2":  "val_2",
+		"varXYZ": "null",
 	}
 
 	inputWorkspaceVarSetVars := VariableMap{
-		"var_2": "val_xyz",
-		"var_3": "val_3",
+		"var_2":  "val_xyz",
+		"var_3":  "val_3",
+		"varTHM": "null",
 	}
 
-	inputSensitiveVars := VariableMap{}
+	inputWorkspaceSensitiveVars := VariableMap{
+		"varXYZ": "non-null value",
+		"varTHM": "non-null value",
+	}
 
 	tfc := CreateTFC(t)
-	byteArray, _ := tfc.generateTFVarsFile(inputWorkspaceVars, inputWorkspaceVarSetVars, inputSensitiveVars)
+	byteArray, _ := tfc.generateTFVarsFile(
+		inputWorkspaceVars, inputWorkspaceVarSetVars, inputWorkspaceSensitiveVars,
+	)
 
-	expectedOutput := `var_1 = "val_1"
-var_2 = "val_2"
-var_3 = "val_3"
+	expectedOutput := `varTHM = "non-null value"
+varXYZ = "non-null value"
+var_1  = "val_1"
+var_2  = "val_2"
+var_3  = "val_3"
 `
 
 	if expectedOutput != string(byteArray) {
 		t.Errorf("got:\n%v\nexpected:\n%v",
 			strconv.Quote(string(byteArray)),
-			expectedOutput)
+			strconv.Quote(expectedOutput))
 	}
 
 	// Testing that the value for tfe_token gets replaced correctly
@@ -204,9 +212,11 @@ var_3 = "val_3"
 		"tfe_token": "value_to_replace",
 	}
 
-	byteArray, _ = tfc.generateTFVarsFile(inputWorkspaceVars, inputWorkspaceVarSetVars, inputSensitiveVars)
+	byteArray, _ = tfc.generateTFVarsFile(inputWorkspaceVars, inputWorkspaceVarSetVars, inputWorkspaceSensitiveVars)
 
 	expectedNotOutput := `tfe_token = "value_to_replace"
+varTHM = "non-null value"
+varXYZ = "non-null value"
 var_1 = "val_1"
 var_2 = "val_2"
 var_3 = "val_3"
@@ -215,7 +225,7 @@ var_3 = "val_3"
 	if string(byteArray) == expectedNotOutput {
 		t.Errorf("got:\n%v\nexpected value not to be:\n%v",
 			strconv.Quote(string(byteArray)),
-			expectedOutput)
+			strconv.Quote(expectedOutput))
 	}
 }
 
@@ -245,7 +255,6 @@ func TestGetVarSetIdsForOrg(t *testing.T) {
 	}
 }
 
-// TODO: Update this unit test
 func TestGetWorkspaceToVarSetVars(t *testing.T) {
 	tfc := CreateTFC(t)
 
@@ -609,6 +618,23 @@ func TestTerraformCloudRequest(t *testing.T) {
 
 	if string(output) != "example output" {
 		t.Errorf("Got %v, expected 'example output'", string(output))
+	}
+}
+
+func TestUpdateEnvironmentVariables(t *testing.T) {
+	tfc := CreateTFC(t)
+	inputMap := VariableMap{
+		"example_var": "example_vars_value",
+	}
+
+	err := tfc.updateEnvironmentVariables(inputMap)
+
+	if err != nil {
+		t.Errorf("unexpected error in tfc.updateEnvironmentVariables: %v", err)
+	}
+
+	if os.Getenv("example_var") != "example_vars_value" {
+		t.Errorf("got %v, expected 'example_vars_value'", os.Getenv("example_var"))
 	}
 }
 
