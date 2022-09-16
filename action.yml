@@ -14,9 +14,6 @@ inputs:
   terraform-cloud-token:
     description: "Terraform cloud access token corresponding to the Terraform Cloud organization above."
     required: true
-  terraform-cloud-variable-name:
-    description: "Terraform cloud variable name within Terraform definitions."
-    required: false
   terraform-workspace-sensitive-vars:
     description: "Mapping between workspaces to sensitive variables."
     required: false
@@ -38,7 +35,6 @@ runs:
     ISAPPLY: ${{ inputs.is-apply }}
     TERRAFORMCLOUDORGANIZATION: ${{ inputs.terraform-cloud-organization }}
     TERRAFORMCLOUDTOKEN: ${{ inputs.terraform-cloud-token }}
-    TERRAFORMCLOUDVARIABLENAME: ${{ inputs.terraform-cloud-variable-name }}
     TERRAFORMWORKSPACESENSITIVEVARS: ${{ inputs.terraform-workspace-sensitive-vars }}
     TERRAFORMVARSETSENSITIVEVARS: ${{ inputs.terraform-var-set-sensitive-vars }}
     WORKSPACETODIRECTORY: ${{ inputs.workspace-to-directories }}

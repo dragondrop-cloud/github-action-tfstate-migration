@@ -33,10 +33,6 @@ type Config struct {
 	// TerraformCloudToken is a Terraform Cloud Token
 	TerraformCloudToken string `required:"true"`
 
-	// TerraformCloudVariableName is the variable name that is associated with a
-	// Terraform Cloud Token in Terraform configuration
-	TerraformCloudVariableName string `required:"false"`
-
 	// TerraformWorkspaceSensitiveVars is a mapping between a Terraform Cloud workspace and sensitive
 	// variables associated with that workspace.
 	TerraformWorkspaceSensitiveVars GroupToVariables `required:"false"`

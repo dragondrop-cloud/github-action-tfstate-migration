@@ -323,6 +323,10 @@ func (tfc *tfCloud) PullWorkspaceVariables(
 		"/github/workspace%vterraform.tfvars",
 		tfc.config.WorkspaceToDirectory[workspaceName],
 	)
+
+	// TODO: Debugging statement:
+	fmt.Println(string(tfVarsFile))
+
 	err = os.WriteFile(fileName, tfVarsFile, 0400)
 	if err != nil {
 		return fmt.Errorf("[os.WriteFile] %v", err)
@@ -483,12 +487,7 @@ func (tfc *tfCloud) generateTFVarsFile(
 				k,
 			)
 		}
-		switch k {
-		case tfc.config.TerraformCloudVariableName:
-			body.SetAttributeValue(k, cty.StringVal(tfc.config.TerraformCloudToken))
-		default:
-			body.SetAttributeValue(k, cty.StringVal(workspaceCompleteVariableMap[k]))
-		}
+		body.SetAttributeValue(k, cty.StringVal(workspaceCompleteVariableMap[k]))
 	}
 
 	return f.Bytes(), nil
