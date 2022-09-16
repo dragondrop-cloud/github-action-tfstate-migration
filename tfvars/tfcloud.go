@@ -185,12 +185,12 @@ func (tfc *tfCloud) extractVarsFromVarSet(
 		value := container.Search("data", strconv.Itoa(i), "attributes", "value").Data()
 
 		if value == nil {
-			varValue := "null"
-			varMap[varKey] = varValue
-		} else {
-			varValue := container.Search("data", strconv.Itoa(i), "attributes", "value").Data().(string)
-			varMap[varKey] = varValue
+			i++
+			continue
 		}
+
+		varValue := container.Search("data", strconv.Itoa(i), "attributes", "value").Data().(string)
+		varMap[varKey] = varValue
 		i++
 	}
 
@@ -385,12 +385,11 @@ func (tfc *tfCloud) extractWorkspaceVars(workspaceResponse []byte) (VariableMap,
 		value := container.Search("data", strconv.Itoa(i), "attributes", "value").Data()
 
 		if value == nil {
-			varValue := "null"
-			outputVarMap[varKey] = varValue
-		} else {
-			varValue := container.Search("data", strconv.Itoa(i), "attributes", "value").Data().(string)
-			outputVarMap[varKey] = varValue
+			i++
+			continue
 		}
+		varValue := container.Search("data", strconv.Itoa(i), "attributes", "value").Data().(string)
+		outputVarMap[varKey] = varValue
 		i++
 	}
 

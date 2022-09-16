@@ -390,7 +390,6 @@ func TestExtractWorkspaceVars(t *testing.T) {
 
 	expectedOutput := VariableMap{
 		"varKey_1": "varVal_1",
-		"varKey_2": "null",
 		"varKey_3": "varValue_3",
 	}
 
@@ -563,8 +562,7 @@ func TestExtractVarsFromVarSet(t *testing.T) {
 
 	expectedOutput := map[string]VariableMap{
 		"test-var-set-id": {
-			"F115037558b045dd82da40b089e5db745": "null",
-			"asd7558b045dd82da40b089e5db745":    "asdazxc0dfd3060e2c37890422905f",
+			"asd7558b045dd82da40b089e5db745": "asdazxc0dfd3060e2c37890422905f",
 		},
 	}
 
