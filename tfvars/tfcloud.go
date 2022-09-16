@@ -104,12 +104,12 @@ func (tfc *tfCloud) getVarSetIdsForOrg() (map[string]string, error) {
 		return nil, fmt.Errorf("[tfc.buildTFCloudHTTPRequest] %v", err)
 	}
 
-	varSetIdToName, err := tfc.extractVarSetIDToName(response)
+	varSetIDToName, err := tfc.extractVarSetIDToName(response)
 	if err != nil {
 		return nil, fmt.Errorf("[tfc.extractVarSetInformation] %v", err)
 	}
 
-	return varSetIdToName, nil
+	return varSetIDToName, nil
 }
 
 // extractVarSetIDToName extracts variable set ids from a response json
@@ -137,7 +137,7 @@ func (tfc *tfCloud) extractVarSetIDToName(response []byte) (map[string]string, e
 func (tfc *tfCloud) getVarSetVars(varSetIDsToName map[string]string) (map[string]VariableMap, error) {
 	varSetToVars := map[string]VariableMap{}
 
-	for varSetID, _ := range varSetIDsToName {
+	for varSetID := range varSetIDsToName {
 		requestPath := fmt.Sprintf("https://app.terraform.io/api/v2/varsets/%v/relationships/vars", varSetID)
 
 		httpRequest, err := tfc.buildTFCloudHTTPRequest(
