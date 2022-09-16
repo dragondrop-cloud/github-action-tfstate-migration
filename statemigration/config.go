@@ -19,8 +19,8 @@ type Config struct {
 	// `tfmigrate plan` ("false") for the migrations.
 	IsApply bool `required:"true"`
 
-	// WorkspaceToDirectory is a map between workspace name and the relative directory for a workspace's
-	// configuration.
+	// WorkspaceToDirectory is a map between workspace name and the relative directory
+	// for a workspace's configuration.
 	WorkspaceToDirectory map[string]string `required:"true"`
 }
 

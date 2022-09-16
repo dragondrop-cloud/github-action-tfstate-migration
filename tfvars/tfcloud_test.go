@@ -26,12 +26,101 @@ func CreateTFC(t *testing.T) tfCloud {
 			TerraformCloudVariableName: "tfe_token",
 			TerraformCloudToken:        os.Getenv("TerraformCloudToken"),
 			TerraformCloudOrganization: os.Getenv("TerraformCloudOrganization"),
-			WorkspaceToDirectory:       map[string]string{"google-backend-api-dev": "/"},
+			TerraformWorkspaceSensitiveVars: GroupToVariables{
+				"workspace_example": Variables{
+					"key_1": VariableData{
+						value:    "val_new_1",
+						category: "env",
+					},
+					"key_xyz": VariableData{
+						value:    "val_2",
+						category: "terraform",
+					},
+				},
+			},
+			TerraformVarSetSensitiveVars: GroupToVariables{
+				"var_set_1": Variables{
+					"key_1": VariableData{
+						value:    "val_1",
+						category: "env",
+					},
+					"key_2": VariableData{
+						value:    "val_2",
+						category: "terraform",
+					},
+				},
+				"var_set_2": Variables{
+					"key_3": VariableData{
+						value:    "val_3",
+						category: "terraform",
+					},
+					"key_4": VariableData{
+						value:    "val_4",
+						category: "env",
+					},
+				},
+				"var_set_3": Variables{
+					"key_1": VariableData{
+						value:    "val_1",
+						category: "terraform",
+					},
+					"key_2": VariableData{
+						value:    "val_2",
+						category: "terraform",
+					},
+				},
+			},
+			WorkspaceToDirectory: map[string]string{"google-backend-api-dev": "/"},
 		},
 		httpClient: http.Client{},
 	}
 
 	return tfc
+}
+
+func TestCreateWorkspaceSensitiveVars(t *testing.T) {
+	tfc := CreateTFC(t)
+
+	inputWorkspaceName := "workspace_example"
+
+	inputWorkspaceToVarSetIDs := map[string]map[string]bool{
+		"workspace_example": {
+			"var_set_1": true,
+			"var_set_2": true,
+		},
+		"workspace_example_2": {
+			"var_set_3": true,
+			"var_set_4": true,
+		},
+	}
+
+	expectedEnvVarMap := VariableMap{
+		"key_1": "val_new_1",
+		"key_4": "val_4",
+	}
+
+	expectedTerraformVarMap := VariableMap{
+		"key_2":   "val_2",
+		"key_3":   "val_3",
+		"key_xyz": "val_2",
+	}
+
+	outputEnvVarMap, outputTerraformVarMap, err := tfc.createWorkspaceSensitiveVars(
+		inputWorkspaceName,
+		inputWorkspaceToVarSetIDs,
+	)
+	if err != nil {
+		t.Errorf("unexpected error from tfc.createWorkspaceSensitiveVars")
+	}
+
+	if !reflect.DeepEqual(expectedEnvVarMap, outputEnvVarMap) {
+		t.Errorf("got %v, expected %v", outputEnvVarMap, expectedEnvVarMap)
+	}
+
+	if !reflect.DeepEqual(expectedTerraformVarMap, outputTerraformVarMap) {
+		t.Errorf("got %v, expected %v", outputTerraformVarMap, expectedTerraformVarMap)
+	}
+
 }
 
 func TestCreateWorkspaceToVarSetVars(t *testing.T) {
@@ -82,27 +171,38 @@ func TestCreateWorkspaceToVarSetVars(t *testing.T) {
 
 func TestGenerateTFVarsFile(t *testing.T) {
 	inputWorkspaceVars := VariableMap{
-		"var_1": "val_1",
-		"var_2": "val_2",
+		"var_1":  "val_1",
+		"var_2":  "val_2",
+		"varXYZ": "null",
 	}
 
 	inputWorkspaceVarSetVars := VariableMap{
-		"var_2": "val_xyz",
-		"var_3": "val_3",
+		"var_2":  "val_xyz",
+		"var_3":  "val_3",
+		"varTHM": "null",
+	}
+
+	inputWorkspaceSensitiveVars := VariableMap{
+		"varXYZ": "non-null value",
+		"varTHM": "non-null value",
 	}
 
 	tfc := CreateTFC(t)
-	byteArray, _ := tfc.generateTFVarsFile(inputWorkspaceVars, inputWorkspaceVarSetVars)
+	byteArray, _ := tfc.generateTFVarsFile(
+		inputWorkspaceVars, inputWorkspaceVarSetVars, inputWorkspaceSensitiveVars,
+	)
 
-	expectedOutput := `var_1 = "val_1"
-var_2 = "val_2"
-var_3 = "val_3"
+	expectedOutput := `varTHM = "non-null value"
+varXYZ = "non-null value"
+var_1  = "val_1"
+var_2  = "val_2"
+var_3  = "val_3"
 `
 
 	if expectedOutput != string(byteArray) {
 		t.Errorf("got:\n%v\nexpected:\n%v",
 			strconv.Quote(string(byteArray)),
-			expectedOutput)
+			strconv.Quote(expectedOutput))
 	}
 
 	// Testing that the value for tfe_token gets replaced correctly
@@ -112,9 +212,11 @@ var_3 = "val_3"
 		"tfe_token": "value_to_replace",
 	}
 
-	byteArray, _ = tfc.generateTFVarsFile(inputWorkspaceVars, inputWorkspaceVarSetVars)
+	byteArray, _ = tfc.generateTFVarsFile(inputWorkspaceVars, inputWorkspaceVarSetVars, inputWorkspaceSensitiveVars)
 
 	expectedNotOutput := `tfe_token = "value_to_replace"
+varTHM = "non-null value"
+varXYZ = "non-null value"
 var_1 = "val_1"
 var_2 = "val_2"
 var_3 = "val_3"
@@ -123,7 +225,7 @@ var_3 = "val_3"
 	if string(byteArray) == expectedNotOutput {
 		t.Errorf("got:\n%v\nexpected value not to be:\n%v",
 			strconv.Quote(string(byteArray)),
-			expectedOutput)
+			strconv.Quote(expectedOutput))
 	}
 }
 
@@ -156,9 +258,13 @@ func TestGetVarSetIdsForOrg(t *testing.T) {
 func TestGetWorkspaceToVarSetVars(t *testing.T) {
 	tfc := CreateTFC(t)
 
-	output, err := tfc.getWorkspaceToVarSetVars()
+	workspaceToVarSetIDs, output, err := tfc.getWorkspaceToVarSetVars()
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
+	}
+
+	if workspaceToVarSetIDs == nil {
+		t.Errorf("expected non-nil workspaceToVarSetIDs from tfc.getWorkspaceToVarSetVars")
 	}
 
 	if output == nil {
@@ -512,5 +618,53 @@ func TestTerraformCloudRequest(t *testing.T) {
 
 	if string(output) != "example output" {
 		t.Errorf("Got %v, expected 'example output'", string(output))
+	}
+}
+
+func TestUpdateEnvironmentVariables(t *testing.T) {
+	tfc := CreateTFC(t)
+	inputMap := VariableMap{
+		"example_var": "example_vars_value",
+	}
+
+	err := tfc.updateEnvironmentVariables(inputMap)
+
+	if err != nil {
+		t.Errorf("unexpected error in tfc.updateEnvironmentVariables: %v", err)
+	}
+
+	if os.Getenv("example_var") != "example_vars_value" {
+		t.Errorf("got %v, expected 'example_vars_value'", os.Getenv("example_var"))
+	}
+}
+
+func TestVariablesToVariableMaps(t *testing.T) {
+	tfc := CreateTFC(t)
+
+	vars := Variables{
+		"key_1": VariableData{
+			value:    "val_1",
+			category: "env",
+		},
+		"key_2": VariableData{
+			value:    "val_2",
+			category: "terraform",
+		},
+	}
+
+	outputVarMapTerraform, outputVarMapEnv, err := tfc.variablesToVariableMaps(vars)
+	if err != nil {
+		t.Errorf("unexpected error %v in tfc.variablesToVariableMaps", err)
+	}
+
+	expectedVarMapTerraform := VariableMap{"key_1": "val_1"}
+	expectedVarMapEnv := VariableMap{"key_2": "val_2"}
+
+	if !reflect.DeepEqual(outputVarMapTerraform, expectedVarMapTerraform) {
+		t.Errorf("got %v, expected %v", outputVarMapTerraform, expectedVarMapTerraform)
+	}
+
+	if !reflect.DeepEqual(outputVarMapEnv, expectedVarMapEnv) {
+		t.Errorf("got %v, expected %v", outputVarMapEnv, expectedVarMapEnv)
 	}
 }
