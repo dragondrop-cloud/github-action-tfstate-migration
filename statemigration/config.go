@@ -2,9 +2,13 @@ package statemigration
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/kelseyhightower/envconfig"
 )
+
+// Version is a type representing a Terraform Version.
+type Version string
 
 // Config contains environment variables needed to run StateMigrator methods.
 type Config struct {
@@ -14,6 +18,9 @@ type Config struct {
 
 	// TerraformCloudToken is a token to access terraform cloud remote state.
 	TerraformCloudToken string `required:"true"`
+
+	// TerraformVersion is the default version of terraform to use for migrations. It is optional.
+	TerraformVersion Version `required:"false"`
 
 	// IsApply is a Boolean of whether to run `tfmigrate apply` ("true") or
 	// `tfmigrate plan` ("false") for the migrations.
@@ -34,4 +41,25 @@ func NewConfig() (*Config, error) {
 	}
 
 	return &c, err
+}
+
+func (v *Version) Decode(value string) error {
+	if string(value[1]) != "." {
+		return fmt.Errorf("terraform version should start with 'major version[.]'")
+	}
+
+	stringComponents := strings.Split(value, ".")
+	versionLength := len(stringComponents)
+	if versionLength != 3 {
+		return fmt.Errorf("expected three pieces of the version once split by '.', instead got %v", versionLength)
+	}
+
+	majorVersion := stringComponents[0]
+
+	if (majorVersion != "0") && (majorVersion != "1") {
+		return fmt.Errorf("terraform major version must be either '0' or '1', got %v", majorVersion)
+	}
+
+	*v = Version(value)
+	return nil
 }

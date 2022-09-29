@@ -58,14 +58,19 @@ jobs:
     permissions:
       contents: "read"
       id-token: "write"
-      
+
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
     steps:
       - name: Checkout branch
         uses: actions/checkout@v3
 
-      - name: Authenticate to Google Cloud
+      - name: Authenticate to Google Cloud - Dev
         id: auth
         uses: google-github-actions/auth@v0
+        if: ${{ github.ref_name != 'prod'}}
         with:
           token_format: "access_token"
           create_credentials_file: 'true'
@@ -79,17 +84,23 @@ jobs:
         with:
           is-apply: false
           terraform-cloud-organization: ${{ secrets.TERRAFORM_CLOUD_ORG }}
-          terraform-cloud-token: ${{ secrets.TERRAFORM_CLOUD_TOKEN }}
+          terraform-cloud-token: ${{ secrets.TERRAFORM_CLOUD_API_TOKEN }}
+          terraform-workspace-sensitive-vars: ${{ secrets.TERRAFORM_WORKSPACE_SENSITIVE_VARS }}
+          terraform-var-set-sensitive-vars: ${{ secrets.TERRAFORM_VAR_SET_SENSITIVE_VARS }}
+          terraform-cloud-variable-name: "tfe_token"
           terraform-version: "1.2.6"
           workspace-to-directories: "workspace_1:/my/relative/directory/1/,workspace_2:/my/relative/directory/2/"
 
-      - name: Apply Migration of Remote State
+      - name: Apply Migration of Remote State - Dev
         uses: dragondrop-cloud/github-action-tfstate-migration@latest
         if: ${{ github.ref_name == 'dev'}}
         with:
           is-apply: true
           terraform-cloud-organization: ${{ secrets.TERRAFORM_CLOUD_ORG }}
-          terraform-cloud-token: ${{ secrets.TERRAFORM_CLOUD_TOKEN }}
+          terraform-cloud-token: ${{ secrets.TERRAFORM_CLOUD_API_TOKEN }}
+          terraform-workspace-sensitive-vars: ${{ secrets.TERRAFORM_WORKSPACE_SENSITIVE_VARS }}
+          terraform-var-set-sensitive-vars: ${{ secrets.TERRAFORM_VAR_SET_SENSITIVE_VARS }}
+          terraform-cloud-variable-name: "tfe_token"
           terraform-version: "1.2.6"
           workspace-to-directories: "workspace_1:/my/relative/directory/1/,workspace_2:/my/relative/directory/2/"
 ```
@@ -108,10 +119,43 @@ Defaults to `"false"`.
 ### `terraform-cloud-token`
 **Required** Terraform Cloud API token with access to the specified `terraform-cloud-organization`.
 
-### `terraform-version`
-**Required** The Terraform version to use within the job.
+### `terraform-workspace-sensitive-vars`:
+Mapping between workspaces to sensitive variables, matching the parameterization of a
+variable as specified within Terraform Cloud.
 
-Defaults to `"latest"`
+Example:
+```"{
+    "my_workspace_one": {
+        "workspace_var_one": {
+            "value": "",
+            "category": "terraform"
+        }
+    }
+}"
+```
+
+### `terraform-var-set-sensitive-vars`:
+Mapping between variable sets to sensitive variables, matching the parameterization of a
+variable as specified within Terraform Cloud.
+
+Example:
+```
+"{
+    "my_var_set_one": {
+        "tfe_token": {
+            "value": "zyha",
+            "category": "terraform"
+        }
+    }
+}"
+```
+
+### `terraform-version`
+The Terraform version to use within the job. Must only be the numerical version ('1.2.3' is valid, '~>1.2.3' is not).
+
+Example: `"1.2.3"`
+
+Defaults to `""`
 
 ### `workspace-to-directories`
 **Required** A map between workspace names and the relative path to that workspace's terraform definition.

@@ -21,9 +21,9 @@ inputs:
     description: "Mapping between variable sets to sensitive variables."
     required: false
   terraform-version:
-    description: "Version of terraform to use for running the statemigration."
-    required: true
-    default: "latest"
+    description: "Version of terraform to use for running the statemigration. Must only be the numerical version ('1.2.3' is valid, '~>1.2.3' is not)."
+    required: false
+    default: ""
   workspace-to-directories:
     description: "Map of workspace names to directories with state migration commands to be run."
     required: true
@@ -31,7 +31,7 @@ runs:
   using: "docker"
   image: "Dockerfile"
   env:
-    TERRAFORM_VERSION: ${{ inputs.terraform-version }}
+    TERRAFORMVERSION: ${{ inputs.terraform-version }}
     ISAPPLY: ${{ inputs.is-apply }}
     TERRAFORMCLOUDORGANIZATION: ${{ inputs.terraform-cloud-organization }}
     TERRAFORMCLOUDTOKEN: ${{ inputs.terraform-cloud-token }}
