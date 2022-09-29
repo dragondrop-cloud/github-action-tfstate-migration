@@ -31,16 +31,22 @@ jobs:
           is-apply: false
           terraform-cloud-organization: ${{ secrets.TERRAFORM_CLOUD_ORG }}
           terraform-cloud-token: ${{ secrets.TERRAFORM_CLOUD_API_TOKEN }}
+          terraform-workspace-sensitive-vars: ${{ secrets.TERRAFORM_WORKSPACE_SENSITIVE_VARS }}
+          terraform-var-set-sensitive-vars: ${{ secrets.TERRAFORM_VAR_SET_SENSITIVE_VARS }}
+          terraform-cloud-variable-name: "tfe_token"
           terraform-version: "1.2.6"
           workspace-to-directories: "workspace_1:/my/relative/directory/1/,workspace_2:/my/relative/directory/2/"
 
-      - name: Apply Migrations to Remote State
+      - name: Apply Migration of Remote State - Dev
         uses: dragondrop-cloud/github-action-tfstate-migration@latest
         if: ${{ github.ref_name == 'dev'}}
         with:
           is-apply: true
           terraform-cloud-organization: ${{ secrets.TERRAFORM_CLOUD_ORG }}
           terraform-cloud-token: ${{ secrets.TERRAFORM_CLOUD_API_TOKEN }}
+          terraform-workspace-sensitive-vars: ${{ secrets.TERRAFORM_WORKSPACE_SENSITIVE_VARS }}
+          terraform-var-set-sensitive-vars: ${{ secrets.TERRAFORM_VAR_SET_SENSITIVE_VARS }}
+          terraform-cloud-variable-name: "tfe_token"
           terraform-version: "1.2.6"
           workspace-to-directories: "workspace_1:/my/relative/directory/1/,workspace_2:/my/relative/directory/2/"
 ```
@@ -58,10 +64,6 @@ jobs:
     permissions:
       contents: "read"
       id-token: "write"
-
-    env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
     steps:
       - name: Checkout branch
@@ -111,10 +113,10 @@ jobs:
 **Required** Whether to attempt to apply migration statements
 found by the action. If `"false"`, will only run a "plan" if the migrations will be successful.
 
-Defaults to `"false"`. 
+Defaults to `"false"`.
 
 ### `terraform-cloud-organization`
-**Required** Name of the Terraform Cloud organization against which migrations are to be run. 
+**Required** Name of the Terraform Cloud organization against which migrations are to be run.
 
 ### `terraform-cloud-token`
 **Required** Terraform Cloud API token with access to the specified `terraform-cloud-organization`.
