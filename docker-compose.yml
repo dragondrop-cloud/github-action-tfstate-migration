@@ -4,12 +4,11 @@ services:
   tfstate-migration:
     build:
       context: .
-      args:
-        TERRAFORM_VERSION: "1.2.4"
     environment:
       - "ISAPPLY=false"
       - "TERRAFORMCLOUDTOKEN=$TerraformCloudToken"
       - "TERRAFORMCLOUDORGANIZATION=$TerraformCloudOrganization"
       - "TERRAFORMVARSETSENSITIVEVARS=$TerraformVarSetSensitiveVars"
+      - "TERRAFORMVERSION=$TerraformVersion"
       - "TERRAFORMWORKSPACESENSITIVEVARS=$TerraformWorkspaceSensitiveVars"
       - "WORKSPACETODIRECTORY=$WorkspaceToDirectory"

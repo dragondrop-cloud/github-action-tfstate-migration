@@ -41,6 +41,21 @@ func (sm *stateMigrator) MigrateWorkspace(w WorkspaceDirectory) error {
 		return fmt.Errorf("[os.Chdir] %v", err)
 	}
 
+	if sm.config.TerraformVersion != "" {
+		tfSwitchArgs := []string{string(sm.config.TerraformVersion)}
+		err = executeCommand("tfswitch", tfSwitchArgs...)
+
+		if err != nil {
+			return fmt.Errorf("[executeCommand `tfswitch`] %v", err)
+		}
+	} else {
+		err = executeCommand("tfswitch", []string{}...)
+
+		if err != nil {
+			return fmt.Errorf("[executeCommand `tfswitch`] %v", err)
+		}
+	}
+
 	terraformInitArgs := []string{"init"}
 	err = executeCommand("terraform", terraformInitArgs...)
 
