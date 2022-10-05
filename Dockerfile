@@ -17,7 +17,6 @@ FROM golang:1.19-alpine3.15 as tfmigrate
 RUN apk update && apk add --no-cache bash git make
 
 # Building tfmigrate executable
-COPY --from=tf /bin/terraform /usr/local/bin/
 RUN git clone https://github.com/minamijoyo/tfmigrate /tfmigrate
 WORKDIR /tfmigrate
 
@@ -32,7 +31,6 @@ RUN apk update && apk add --no-cache bash git make
 
 # Copying compiled executables from tf-requirements
 COPY --from=tfswitch /usr/local/bin/tfswitch /usr/local/bin/
-COPY --from=tf /bin/terraform /usr/local/bin/
 COPY --from=tfmigrate go/bin/tfmigrate /usr/local/bin/
 
 # Building the src code
