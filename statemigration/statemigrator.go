@@ -16,7 +16,7 @@ type StateMigrator interface {
 	MigrateAllWorkspaces() error
 
 	// MigrateWorkspace runs migrations for the workspace specified.
-	MigrateWorkspace(w WorkspaceDirectory) error
+	MigrateWorkspace(workspace string, directory WorkspaceDirectory) error
 }
 
 // stateMigrator implements the StateMigrator interface.
