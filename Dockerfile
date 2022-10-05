@@ -7,7 +7,7 @@
 # 1) Reference to tfswitch binary
 ###################################################################################################
 FROM golang:1.19-alpine3.15 as tfswitch
-RUN apk update && apk add --no-cache bash curl git make
+RUN apk update && apk add --no-cache bash curl git make libc6-compat
 RUN curl -L https://raw.githubusercontent.com/warrensbox/terraform-switcher/release/install.sh | bash
 
 ###################################################################################################
@@ -45,7 +45,7 @@ RUN  CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
 # 4) Final lightweight container
 ###################################################################################################
 FROM golang:1.19-alpine3.15
-RUN apk update && apk add --no-cache bash git make
+RUN apk update && apk add --no-cache bash git make libc6-compat
 
 # Copying compiled executables from upstream builds
 COPY --from=tfswitch /usr/local/bin/tfswitch /usr/local/bin/
