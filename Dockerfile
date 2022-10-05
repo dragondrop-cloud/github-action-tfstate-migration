@@ -6,7 +6,7 @@
 ###################################################################################################
 # 1) Reference to tfswitch binary
 ###################################################################################################
-FROM golang:1.18.2-alpine3.15 as tfswitch
+FROM golang:1.19-alpine3.15 as tfswitch
 RUN apk update && apk add --no-cache bash curl git make
 RUN curl -L https://raw.githubusercontent.com/warrensbox/terraform-switcher/release/install.sh | bash
 
@@ -47,7 +47,7 @@ RUN  CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
 FROM golang:1.19-alpine3.15
 RUN apk update && apk add --no-cache bash git make
 
-# Copying compiled executables from tf-requirements
+# Copying compiled executables from upstream builds
 COPY --from=tfswitch /usr/local/bin/tfswitch /usr/local/bin/
 COPY --from=tfmigrate go/bin/tfmigrate /usr/local/bin/
 COPY --from=tfstate-migration /go/bin/github-action-tfstate-migration /go/bin/github-action-tfstate-migration

@@ -153,7 +153,7 @@ Example:
 ```
 
 ### `terraform-version`
-The Terraform version to use within the job. Must only be the numerical version ('1.2.3' is valid, '~>1.2.3' is not).
+**Required** The Terraform version to use within the job. Must only be the numerical version ('1.2.3' is valid, '~>1.2.3' is not).
 
 Example: `"1.2.3"`
 

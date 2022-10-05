@@ -43,6 +43,8 @@ func (sm *stateMigrator) MigrateWorkspace(w WorkspaceDirectory) error {
 
 	if sm.config.TerraformVersion != "" {
 		tfSwitchArgs := []string{string(sm.config.TerraformVersion)}
+		// TODO: Debugging statement
+		fmt.Printf("Terraform Version has been specified to be %v\n", string(sm.config.TerraformVersion))
 		err = executeCommand("tfswitch", tfSwitchArgs...)
 
 		if err != nil {
@@ -50,7 +52,8 @@ func (sm *stateMigrator) MigrateWorkspace(w WorkspaceDirectory) error {
 		}
 	} else {
 		err = executeCommand("tfswitch", []string{}...)
-
+		// TODO: Debugging statement
+		fmt.Printf("unexpected tfswitch case")
 		if err != nil {
 			return fmt.Errorf("[executeCommand `tfswitch`] %v", err)
 		}

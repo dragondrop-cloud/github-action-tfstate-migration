@@ -20,7 +20,7 @@ type Config struct {
 	TerraformCloudToken string `required:"true"`
 
 	// TerraformVersion is the default version of terraform to use for migrations. It is optional.
-	TerraformVersion Version `required:"false"`
+	TerraformVersion Version `required:"true"`
 
 	// IsApply is a Boolean of whether to run `tfmigrate apply` ("true") or
 	// `tfmigrate plan` ("false") for the migrations.
