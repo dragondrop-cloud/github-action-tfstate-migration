@@ -24,14 +24,10 @@ RUN go mod download
 RUN make install
 
 ###################################################################################################
-# 3) Building the github action logic
+# 3) Building the go binary
 ###################################################################################################
-FROM golang:1.19-alpine3.15
+FROM golang:1.19-alpine3.15 as tfstate-migration
 RUN apk update && apk add --no-cache bash git make
-
-# Copying compiled executables from tf-requirements
-COPY --from=tfswitch /usr/local/bin/tfswitch /usr/local/bin/
-COPY --from=tfmigrate go/bin/tfmigrate /usr/local/bin/
 
 # Building the src code
 WORKDIR $GOPATH/github-action-ftstate-migration/
@@ -41,6 +37,19 @@ RUN go mod download
 
 COPY . .
 
-RUN go install
+RUN  CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+     go build -ldflags='-w -s -extldflags "-static"' -a \
+     -o /go/bin/github-action-tfstate-migration .
+
+###################################################################################################
+# 4) Final lightweight container
+###################################################################################################
+FROM golang:1.19-alpine3.15
+RUN apk update && apk add --no-cache bash git make
+
+# Copying compiled executables from tf-requirements
+COPY --from=tfswitch /usr/local/bin/tfswitch /usr/local/bin/
+COPY --from=tfmigrate go/bin/tfmigrate /usr/local/bin/
+COPY --from=tfstate-migration /go/bin/github-action-tfstate-migration /go/bin/github-action-tfstate-migration
 
 ENTRYPOINT ["/go/bin/github-action-tfstate-migration"]
