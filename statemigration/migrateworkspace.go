@@ -2,6 +2,7 @@ package statemigration
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -36,6 +37,8 @@ func (sm *stateMigrator) MigrateAllWorkspaces() error {
 
 // MigrateWorkspace runs migrations for the workspace specified.
 func (sm *stateMigrator) MigrateWorkspace(workspace string, directory WorkspaceDirectory) error {
+	ctx := context.Background()
+
 	err := os.Chdir(fmt.Sprintf("/github/workspace%v", string(directory)))
 	if err != nil {
 		return fmt.Errorf("[os.Chdir] %v", err)
@@ -66,8 +69,13 @@ func (sm *stateMigrator) MigrateWorkspace(workspace string, directory WorkspaceD
 
 	planOrApply, tfMigrateArgs := sm.BuildTFMigrateArgs()
 
+	workspaceID, err := sm.getWorkspaceID(ctx, workspace)
+	if err != nil {
+		return fmt.Errorf("[sm.getWorkspaceID] %v", err)
+	}
+
 	if planOrApply == "apply" {
-		err = sm.discardActiveRunsUnlockState()
+		err = sm.discardActiveRunsUnlockState(ctx, workspaceID)
 		if err != nil {
 			return fmt.Errorf("[sm.clearPendingRunsAndUnlockState`] %v", err)
 		}
@@ -80,7 +88,7 @@ func (sm *stateMigrator) MigrateWorkspace(workspace string, directory WorkspaceD
 	}
 
 	if planOrApply == "apply" {
-		err = sm.createPlanOnlyRefreshRun()
+		err = sm.createPlanOnlyRefreshRun(ctx, workspaceID)
 		if err != nil {
 			return fmt.Errorf("[sm.kickOffPlanOnlyRefreshRun`] %v", err)
 		}

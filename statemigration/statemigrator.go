@@ -2,6 +2,7 @@ package statemigration
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/dragondrop-cloud/github-action-tfstate-migration/tfvars"
 )
@@ -25,6 +26,9 @@ type stateMigrator struct {
 	// config is composed of environment variables needed to run StateMigrator methods.
 	config *Config
 
+	// httpClient is an HTTP Client for use in all http calls made by stateMigrator
+	httpClient http.Client
+
 	// tfVar is a struct which can extract the remote variables needed to run migration statements.
 	tfVar tfvars.TFVars
 }
@@ -42,7 +46,8 @@ func NewStateMigrator() (StateMigrator, error) {
 	}
 
 	return &stateMigrator{
-		config: conf,
-		tfVar:  tfVar,
+		config:     conf,
+		httpClient: http.Client{},
+		tfVar:      tfVar,
 	}, nil
 }
