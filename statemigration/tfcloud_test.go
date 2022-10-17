@@ -4,8 +4,31 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
+
+	"github.com/joho/godotenv"
 )
+
+func CreateStateMigrator(t *testing.T) stateMigrator {
+	_, isRemote := os.LookupEnv("TerraformCloudToken")
+	if !isRemote {
+		err := godotenv.Load()
+		if err != nil {
+			t.Errorf("[godotenv.Load] Unexpected error: %v", err)
+		}
+	}
+
+	tfc := stateMigrator{
+		config: &Config{
+			TerraformCloudToken:        os.Getenv("TerraformCloudToken"),
+			TerraformCloudOrganization: os.Getenv("TerraformCloudOrganization"),
+		},
+		httpClient: http.Client{},
+	}
+
+	return tfc
+}
 
 func TestBuildTFCloudHTTPRequest(t *testing.T) {
 	ctx := context.Background()
@@ -41,6 +64,25 @@ func TestBuildTFCloudHTTPRequest(t *testing.T) {
 
 }
 
+// TODO
+func TestCreatePlanOnlyRefreshRun(t *testing.T) {
+}
+
+func TestDiscardActiveRunsUnlockState(t *testing.T) {
+	sm := CreateStateMigrator(t)
+	ctx := context.Background()
+
+	// Very simple test, only checking that it can run end to end
+	err := sm.discardActiveRunsUnlockState(ctx, os.Getenv("TerraformCloudWorkspaceID"))
+	if err != nil {
+		t.Errorf("[sm.discardActiveRunsUnlockState] %v", err)
+	}
+}
+
+// TODO
+func TestExtractRecentRunStatuses(t *testing.T) {
+}
+
 func TestExtractWorkspaceID(t *testing.T) {
 	jsonBytes := []byte(`{
 		"data" : {
@@ -56,6 +98,54 @@ func TestExtractWorkspaceID(t *testing.T) {
 	expectedValue := "8675309"
 	if outputValue != expectedValue {
 		t.Errorf("Got %v, expected %v", expectedValue, outputValue)
+	}
+}
+
+func TestIsStatusPostConfirmation(t *testing.T) {
+	status := "example"
+	outputOne := isStatusPostConfirmation(status)
+	if outputOne != false {
+		t.Errorf("got %v, expected %v", outputOne, false)
+	}
+
+	validStatusSlice := []string{
+		"confirmed",
+		"post_plan_running",
+		"post_plan_completed",
+		"apply_queued",
+		"applying",
+	}
+	for _, status = range validStatusSlice {
+		outputTwo := isStatusPostConfirmation(status)
+		if outputTwo != true {
+			t.Errorf("got %v, expected %v, input status of: %v", outputTwo, true, status)
+		}
+
+	}
+}
+
+func TestIsStatusTerminalState(t *testing.T) {
+	status := "example"
+	outputOne := isStatusTerminalState(status)
+	if outputOne != false {
+		t.Errorf("got %v, expected %v", outputOne, false)
+	}
+
+	validStatusSlice := []string{
+		"policy_soft_failed",
+		"planned_and_finished",
+		"applied",
+		"discarded",
+		"errored",
+		"canceled",
+		"force_canceled",
+	}
+	for _, status = range validStatusSlice {
+		outputTwo := isStatusTerminalState(status)
+		if outputTwo != true {
+			t.Errorf("got %v, expected %v, input status of: %v", outputTwo, true, status)
+		}
+
 	}
 }
 

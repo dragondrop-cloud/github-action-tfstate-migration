@@ -5,9 +5,27 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/Jeffail/gabs/v2"
 )
+
+// RunStatus is a struct containing information on a workspace run as is required to determine whether
+// to cancel or discard a run if possible.
+type RunStatus struct {
+
+	// isCancelable is whether a run can be canceled.
+	isCancelable bool
+
+	// isDiscardable is whether a run can be discarded.
+	isDiscardable bool
+
+	// isPostConfirmation is whether a run is post user-confirmation that a plan should be applied.
+	isPostConfirmation bool
+
+	// runID is the Terraform Cloud ID for a workspace run.
+	runID string
+}
 
 // getWorkspaceID gets the workspace ID for the corresponding workspace name
 // from the Terraform Cloud API.
@@ -49,14 +67,118 @@ func extractWorkspaceID(jsonBytes []byte) (string, error) {
 // discardActiveRunsUnlockState identifies pending/active Terraform Cloud runs and discards
 // them so that tfmigrate apply can itself apply a state lock and run migrations.
 func (sm *stateMigrator) discardActiveRunsUnlockState(ctx context.Context, workspaceID string) error {
-	// TODO: First get a list of all active/pending runs
-	// https://developer.hashicorp.com/terraform/cloud-docs/api-docs/run#discard-a-run
+	// Get a list of all active/pending runs
+	requestName := "getMostRecentRuns"
+	requestPath := fmt.Sprintf("https://app.terraform.io/api/v2/workspaces/%v/runs", workspaceID)
 
-	// TODO: For each run in list of active/pending, discard.
+	request, err := sm.buildTFCloudHTTPRequest(ctx, requestName, "GET", requestPath)
+
+	if err != nil {
+		return fmt.Errorf("[%v] error in newRequest: %v", requestName, err)
+	}
+
+	jsonResponseBytes, err := sm.terraformCloudRequest(request, requestName)
+
+	if err != nil {
+		return err
+	}
+
+	runStatusSlices, err := extractRecentRunStatuses(jsonResponseBytes)
+	if err != nil {
+		return fmt.Errorf("[extractRecentRunStatuses] %v", err)
+	}
+
+	// TODO
+	fmt.Println(runStatusSlices)
+
+	for _, runStatus := range runStatusSlices {
+		if runStatus.isPostConfirmation {
+			fmt.Println(
+				"There is an unfinished run that is post-confirmation. We do not discard those runs, ending " +
+					"job execution.")
+		}
+	}
+	// TODO: For each run in list, apply relevant operation (discard, cancel, or error message)
 	// https://developer.hashicorp.com/terraform/cloud-docs/api-docs/run#create-a-run
 	return nil
 }
 
+// TODO: Unit test this function
+// extractRecentRunStatuses extracts statuses for recent runs in the workspace.
+func extractRecentRunStatuses(jsonResponseBytes []byte) ([]RunStatus, error) {
+	jsonParsed, err := gabs.ParseJSON(jsonResponseBytes)
+	if err != nil {
+		return nil, fmt.Errorf("[gabs.ParseJSON] %v", err)
+	}
+
+	var runStatusSlice []RunStatus
+
+	i := 0
+
+	for jsonParsed.Exists("data", strconv.Itoa(i)) {
+
+		status := jsonParsed.Search("data", strconv.Itoa(i), "attributes", "status").Data().(string)
+
+		// checking if the status is in a terminal state, if so, continue and skip the next iteration
+		if isStatusTerminalState(status) {
+			i++
+			continue
+		}
+
+		isCancelable := jsonParsed.Search("data", strconv.Itoa(i), "attributes", "actions", "is-cancelable").Data().(bool)
+
+		isDiscardable := jsonParsed.Search("data", strconv.Itoa(i), "attributes", "actions", "is-discardable").Data().(bool)
+
+		runID := jsonParsed.Search("data", strconv.Itoa(i), "id").Data().(string)
+
+		isPostConfirmation := isStatusPostConfirmation(status)
+
+		currentRS := RunStatus{
+			isCancelable:       isCancelable,
+			isDiscardable:      isDiscardable,
+			isPostConfirmation: isPostConfirmation,
+			runID:              runID,
+		}
+
+		runStatusSlice = append(runStatusSlice, currentRS)
+
+		i++
+	}
+
+	return runStatusSlice, nil
+}
+
+// isStatusTerminalState checks to see if the received status indicates that a job is in a terminal
+// state.
+func isStatusTerminalState(status string) bool {
+	terminalStateSet := map[string]bool{
+		"policy_soft_failed":   true,
+		"planned_and_finished": true,
+		"applied":              true,
+		"discarded":            true,
+		"errored":              true,
+		"canceled":             true,
+		"force_canceled":       true,
+	}
+
+	return terminalStateSet[status]
+}
+
+// isStatusPostConfirmation checks to see if the received status indicates that a job
+// has been approved after a plan has executed.
+func isStatusPostConfirmation(status string) bool {
+	postConfirmationSet := map[string]bool{
+		"confirmed":           true,
+		"post_plan_running":   true,
+		"post_plan_completed": true,
+		"apply_queued":        true,
+		"applying":            true,
+	}
+
+	return postConfirmationSet[status]
+}
+
+// TODO: Implement and unit test
 // createPlanOnlyRefreshRun kicks off a new plan-only, refresh-state run for the workspace.
 func (sm *stateMigrator) createPlanOnlyRefreshRun(ctx context.Context, workspaceID string) error {
 	// TODO: Create a plan-only refresh run
