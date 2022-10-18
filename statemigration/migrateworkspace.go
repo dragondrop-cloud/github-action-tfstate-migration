@@ -90,7 +90,7 @@ func (sm *stateMigrator) MigrateWorkspace(workspace string, directory WorkspaceD
 	if planOrApply == "apply" {
 		err = sm.createPlanOnlyRefreshRun(ctx, workspaceID)
 		if err != nil {
-			return fmt.Errorf("[sm.kickOffPlanOnlyRefreshRun`] %v", err)
+			return fmt.Errorf("[sm.createPlanOnlyRefreshRun`] %v", err)
 		}
 	}
 

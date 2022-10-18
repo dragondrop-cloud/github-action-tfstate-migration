@@ -1,6 +1,7 @@
 package statemigration
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -33,7 +34,7 @@ func (sm *stateMigrator) getWorkspaceID(ctx context.Context, workspace string) (
 	requestName := "getWorkspaceID"
 	requestPath := fmt.Sprintf("https://app.terraform.io/api/v2/organizations/%v/workspaces/%v", sm.config.TerraformCloudOrganization, workspace)
 
-	request, err := sm.buildTFCloudHTTPRequest(ctx, requestName, "GET", requestPath)
+	request, err := sm.buildTFCloudHTTPRequest(ctx, requestName, "GET", requestPath, nil)
 
 	if err != nil {
 		return "", fmt.Errorf("[%v] error in newRequest: %v", requestName, err)
@@ -71,7 +72,7 @@ func (sm *stateMigrator) discardActiveRunsUnlockState(ctx context.Context, works
 	requestName := "getMostRecentRuns"
 	requestPath := fmt.Sprintf("https://app.terraform.io/api/v2/workspaces/%v/runs", workspaceID)
 
-	request, err := sm.buildTFCloudHTTPRequest(ctx, requestName, "GET", requestPath)
+	request, err := sm.buildTFCloudHTTPRequest(ctx, requestName, "GET", requestPath, nil)
 
 	if err != nil {
 		return fmt.Errorf("[%v] error in newRequest: %v", requestName, err)
@@ -83,27 +84,75 @@ func (sm *stateMigrator) discardActiveRunsUnlockState(ctx context.Context, works
 		return err
 	}
 
-	runStatusSlices, err := extractRecentRunStatuses(jsonResponseBytes)
+	runStatusSlice, err := extractRecentRunStatuses(jsonResponseBytes)
 	if err != nil {
 		return fmt.Errorf("[extractRecentRunStatuses] %v", err)
 	}
 
-	// TODO
-	fmt.Println(runStatusSlices)
-
-	for _, runStatus := range runStatusSlices {
+	for _, runStatus := range runStatusSlice {
 		if runStatus.isPostConfirmation {
 			fmt.Println(
 				"There is an unfinished run that is post-confirmation. We do not discard those runs, ending " +
 					"job execution.")
 		}
 	}
-	// TODO: For each run in list, apply relevant operation (discard, cancel, or error message)
-	// https://developer.hashicorp.com/terraform/cloud-docs/api-docs/run#create-a-run
+
+	for _, runStatus := range runStatusSlice {
+		if runStatus.isDiscardable {
+			err = sm.discardRun(ctx, runStatus.runID)
+			if err != nil {
+				return fmt.Errorf("[sm.discardRun] %v", err)
+			}
+		} else if runStatus.isCancelable {
+			err = sm.cancelRun(ctx, runStatus.runID)
+			if err != nil {
+				return fmt.Errorf("[sm.cancelRun] %v", err)
+			}
+		}
+	}
+
 	return nil
 }
 
-// TODO: Unit test this function
+// TODO: Add unit test if possible
+// cancelRun cancels the run specified by runID.
+func (sm *stateMigrator) cancelRun(ctx context.Context, runID string) error {
+	requestName := "cancelRun"
+	requestPath := fmt.Sprintf("https://app.terraform.io/api/v2/runs/%v/actions/discard", runID)
+
+	request, err := sm.buildTFCloudHTTPRequest(ctx, requestName, "POST", requestPath, nil)
+
+	if err != nil {
+		return fmt.Errorf("[%v] error in newRequest: %v", requestName, err)
+	}
+
+	_, err = sm.terraformCloudRequest(request, requestName)
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// discardRun discards the run specified by runID.
+func (sm *stateMigrator) discardRun(ctx context.Context, runID string) error {
+	requestName := "discardRun"
+	requestPath := fmt.Sprintf("https://app.terraform.io/api/v2/runs/%v/actions/discard", runID)
+
+	request, err := sm.buildTFCloudHTTPRequest(ctx, requestName, "POST", requestPath, nil)
+
+	if err != nil {
+		return fmt.Errorf("[%v] error in newRequest: %v", requestName, err)
+	}
+
+	_, err = sm.terraformCloudRequest(request, requestName)
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // extractRecentRunStatuses extracts statuses for recent runs in the workspace.
 func extractRecentRunStatuses(jsonResponseBytes []byte) ([]RunStatus, error) {
 	jsonParsed, err := gabs.ParseJSON(jsonResponseBytes)
@@ -178,17 +227,66 @@ func isStatusPostConfirmation(status string) bool {
 	return postConfirmationSet[status]
 }
 
-// TODO: Implement and unit test
 // createPlanOnlyRefreshRun kicks off a new plan-only, refresh-state run for the workspace.
 func (sm *stateMigrator) createPlanOnlyRefreshRun(ctx context.Context, workspaceID string) error {
-	// TODO: Create a plan-only refresh run
-	// https://developer.hashicorp.com/terraform/cloud-docs/api-docs/run#list-runs-in-a-workspace
+	requestPath := "https://app.terraform.io/api/v2/runs"
+
+	payload, err := generateRefreshOnlyPlanPayload(workspaceID)
+	if err != nil {
+		return fmt.Errorf("[generateRefreshOnlyPlanPayload] %v", err)
+	}
+
+	requestName := "createPlanOnlyRefreshRun"
+
+	request, err := sm.buildTFCloudHTTPRequest(ctx, requestName, "POST", requestPath, bytes.NewBuffer(payload))
+
+	if err != nil {
+		return fmt.Errorf("[%v] error in newRequest: %v", requestName, err)
+	}
+	_, err = sm.terraformCloudRequest(request, requestName)
+
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
+// generateRefreshOnlyPlanPayload builds the JSON payload needed to
+// run a refresh-only, plan-only, run within Terraform cloud for the specified workspaceID.
+func generateRefreshOnlyPlanPayload(workspaceID string) ([]byte, error) {
+	jsonObj := gabs.New()
+
+	_, err := jsonObj.Set("runs", "data", "type")
+	if err != nil {
+		return nil, fmt.Errorf("[data: type:]%v", err)
+	}
+
+	_, err = jsonObj.Set(true, "data", "attributes", "refresh-only")
+	if err != nil {
+		return nil, fmt.Errorf("[data: attributes: refresh-only:]%v", err)
+	}
+
+	_, err = jsonObj.Set(true, "data", "attributes", "plan-only")
+	if err != nil {
+		return nil, fmt.Errorf("[data: attributes: plan-only:]%v", err)
+	}
+
+	_, err = jsonObj.Set("workspaces", "data", "relationships", "workspace", "data", "type")
+	if err != nil {
+		return nil, fmt.Errorf("[data: relationships: workspace: type:]%v", err)
+	}
+
+	_, err = jsonObj.Set(workspaceID, "data", "relationships", "workspace", "data", "id")
+	if err != nil {
+		return nil, fmt.Errorf("[data: relationship: workspace: id:]%v", err)
+	}
+
+	return jsonObj.Bytes(), nil
+}
+
 // buildTFCloudHTTPRequest structures a request to the Terraform Cloud api.
-func (sm *stateMigrator) buildTFCloudHTTPRequest(ctx context.Context, requestName string, method string, requestPath string) (*http.Request, error) {
-	request, err := http.NewRequestWithContext(ctx, method, requestPath, nil)
+func (sm *stateMigrator) buildTFCloudHTTPRequest(ctx context.Context, requestName string, method string, requestPath string, body io.Reader) (*http.Request, error) {
+	request, err := http.NewRequestWithContext(ctx, method, requestPath, body)
 	if err != nil {
 		return nil, fmt.Errorf("[%v] error in http request instantiation: %v", requestName, err)
 	}
@@ -211,7 +309,7 @@ func (sm *stateMigrator) terraformCloudRequest(request *http.Request, requestNam
 	}
 
 	defer response.Body.Close()
-	if response.StatusCode != 200 {
+	if !(response.StatusCode <= 299) {
 		return nil, fmt.Errorf("[%v] was unsuccessful, with the server returning: %v", requestName, response.StatusCode)
 	}
 

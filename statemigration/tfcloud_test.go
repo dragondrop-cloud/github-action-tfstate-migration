@@ -44,7 +44,7 @@ func TestBuildTFCloudHTTPRequest(t *testing.T) {
 	}
 
 	request, err := sm.buildTFCloudHTTPRequest(
-		ctx, "testRequest", "GET", "https://test.com/",
+		ctx, "testRequest", "GET", "https://test.com/", nil,
 	)
 	if err != nil {
 		t.Errorf("Error in buildTFCloudHTTPRequest: %v", err)
@@ -64,10 +64,6 @@ func TestBuildTFCloudHTTPRequest(t *testing.T) {
 
 }
 
-// TODO
-func TestCreatePlanOnlyRefreshRun(t *testing.T) {
-}
-
 func TestDiscardActiveRunsUnlockState(t *testing.T) {
 	sm := CreateStateMigrator(t)
 	ctx := context.Background()
@@ -79,8 +75,76 @@ func TestDiscardActiveRunsUnlockState(t *testing.T) {
 	}
 }
 
-// TODO
 func TestExtractRecentRunStatuses(t *testing.T) {
+	inputJSONByteSlice := []byte(
+		`{
+  "data": [
+    {
+      "id": "run-CZcmD7eagjhyX0vN",
+      "type": "runs",
+      "attributes": {
+        "actions": {
+          "is-cancelable": true,
+          "is-confirmable": false,
+          "is-discardable": false,
+          "is-force-cancelable": false
+        },
+        "status": "pending",
+        "refresh": false,
+        "refresh-only": false,
+        "replace-addrs": null,
+        "variables": []
+      },
+      "links": {
+        "self": "/api/v2/runs/run-bWSq4YeYpfrW4mx7"
+      }
+    },
+	{
+      "id": "run-CZcmD7eagjhyX0vN",
+      "type": "runs",
+      "attributes": {
+        "actions": {
+          "is-cancelable": false,
+          "is-confirmable": true,
+          "is-discardable": true,
+          "is-force-cancelable": false
+        },
+        "status": "applying",
+        "refresh": false,
+        "refresh-only": false,
+        "replace-addrs": null,
+        "variables": []
+      },
+      "links": {
+        "self": "/api/v2/runs/run-bWSq4YeYpfrW4mx7"
+      }
+    }
+  ]
+}`)
+
+	expectedOutput := []RunStatus{
+		{
+			isCancelable:       true,
+			isDiscardable:      false,
+			isPostConfirmation: false,
+			runID:              "run-CZcmD7eagjhyX0vN",
+		},
+		{
+			isCancelable:       false,
+			isDiscardable:      true,
+			isPostConfirmation: true,
+			runID:              "run-CZcmD7eagjhyX0vN",
+		},
+	}
+
+	output, err := extractRecentRunStatuses(inputJSONByteSlice)
+	if err != nil {
+		t.Errorf("[extractRecentRunStatuses] %v", err)
+	}
+
+	if output[0] != expectedOutput[0] || output[1] != expectedOutput[1] {
+		t.Errorf("got %v, expected %v", output, expectedOutput)
+	}
 }
 
 func TestExtractWorkspaceID(t *testing.T) {
@@ -99,6 +163,20 @@ func TestExtractWorkspaceID(t *testing.T) {
 	if outputValue != expectedValue {
 		t.Errorf("Got %v, expected %v", expectedValue, outputValue)
 	}
+}
+
+func TestGenerateRefreshOnlyPlanPayload(t *testing.T) {
+	expectedOutput := []byte(`{"data":{"attributes":{"plan-only":true,"refresh-only":true},"relationships":{"workspace":{"data":{"id":"ws-LLGHCr4SWy28wyGN","type":"workspaces"}}},"type":"runs"}}`)
+
+	output, err := generateRefreshOnlyPlanPayload("ws-LLGHCr4SWy28wyGN")
+	if err != nil {
+		t.Errorf("[generateRefresjOnlyPlanPayload] %v", err)
+	}
+
+	if string(expectedOutput) != string(output) {
+		t.Errorf("got:\n%v\nexpected:\n%v", string(output), string(expectedOutput))
+	}
+
 }
 
 func TestIsStatusPostConfirmation(t *testing.T) {
@@ -174,9 +252,7 @@ func TestTerraformCloudRequest(t *testing.T) {
 		httpClient: http.Client{},
 	}
 
-	request, _ := sm.buildTFCloudHTTPRequest(
-		ctx, "testRequest", "GET", server.URL+"/terraform/cloud/",
-	)
+	request, _ := sm.buildTFCloudHTTPRequest(ctx, "testRequest", "GET", server.URL+"/terraform/cloud/", nil)
 
 	output, err := sm.terraformCloudRequest(request, "testRequest")
 
