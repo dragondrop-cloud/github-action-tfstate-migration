@@ -12,7 +12,7 @@ func TestBuildTFMigrateArgs(t *testing.T) {
 		},
 	}
 
-	output := sm.BuildTFMigrateArgs()
+	_, output := sm.BuildTFMigrateArgs()
 	expectedOutput := []string{"plan", "--config=./dragondrop/tfmigrate/.tfmigrate.hcl"}
 
 	if !reflect.DeepEqual(output, expectedOutput) {
@@ -25,7 +25,7 @@ func TestBuildTFMigrateArgs(t *testing.T) {
 		},
 	}
 
-	output = sm.BuildTFMigrateArgs()
+	_, output = sm.BuildTFMigrateArgs()
 	expectedOutput = []string{"apply", "--config=./dragondrop/tfmigrate/.tfmigrate.hcl"}
 
 	if !reflect.DeepEqual(output, expectedOutput) {

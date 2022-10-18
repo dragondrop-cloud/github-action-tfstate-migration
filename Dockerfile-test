@@ -61,6 +61,9 @@ ENV TERRAFORMCLOUDTOKEN=$TerraformCloudToken
 ARG TerraformCloudOrganization
 ENV TERRAFORMCLOUDORGANIZATION=$TerraformCloudOrganization
 
+ARG TerraformVersion
+ENV TERRAFORMVERSION=$TerraformVersion
+
 ARG WorkspaceToDirectory
 ENV WORKSPACETODIRECTORY=$WorkspaceToDirectory
 

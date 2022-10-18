@@ -2,6 +2,7 @@ package statemigration
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -17,13 +18,13 @@ func (sm *stateMigrator) MigrateAllWorkspaces() error {
 	}
 	fmt.Println("Done creating workspace variable files.")
 
-	for _, directory := range sm.config.WorkspaceToDirectory {
+	for workspace, directory := range sm.config.WorkspaceToDirectory {
 		if directory == "null" {
 			continue
 		}
 
 		fmt.Printf("Beginning to migrate the directory %v\n", directory)
-		err = sm.MigrateWorkspace(WorkspaceDirectory(directory))
+		err = sm.MigrateWorkspace(workspace, WorkspaceDirectory(directory))
 		if err != nil {
 			return fmt.Errorf("[sm.MigrateWorkspace] Error migrating %v workspace: %v", directory, err)
 		}
@@ -35,16 +36,16 @@ func (sm *stateMigrator) MigrateAllWorkspaces() error {
 }
 
 // MigrateWorkspace runs migrations for the workspace specified.
-func (sm *stateMigrator) MigrateWorkspace(w WorkspaceDirectory) error {
-	err := os.Chdir(fmt.Sprintf("/github/workspace%v", string(w)))
+func (sm *stateMigrator) MigrateWorkspace(workspace string, directory WorkspaceDirectory) error {
+	ctx := context.Background()
+
+	err := os.Chdir(fmt.Sprintf("/github/workspace%v", string(directory)))
 	if err != nil {
 		return fmt.Errorf("[os.Chdir] %v", err)
 	}
 
 	if sm.config.TerraformVersion != "" {
 		tfSwitchArgs := []string{string(sm.config.TerraformVersion)}
-		// TODO: Correctly hitting this use case. Keep getting "No such file or directory" which is problematic.
-		fmt.Printf("Terraform Version has been specified to be %v\n", string(sm.config.TerraformVersion))
 		err = executeCommand("tfswitch", tfSwitchArgs...)
 
 		if err != nil {
@@ -64,13 +65,33 @@ func (sm *stateMigrator) MigrateWorkspace(w WorkspaceDirectory) error {
 		return fmt.Errorf("[executeCommand `terraform init`] %v", err)
 	}
 
-	fmt.Printf("Running migrations for: %v", w)
+	fmt.Printf("Running migrations for: %v", directory)
 
-	tfMigrateArgs := sm.BuildTFMigrateArgs()
+	planOrApply, tfMigrateArgs := sm.BuildTFMigrateArgs()
+
+	workspaceID, err := sm.getWorkspaceID(ctx, workspace)
+	if err != nil {
+		return fmt.Errorf("[sm.getWorkspaceID] %v", err)
+	}
+
+	if planOrApply == "apply" {
+		err = sm.discardActiveRunsUnlockState(ctx, workspaceID)
+		if err != nil {
+			return fmt.Errorf("[sm.clearPendingRunsAndUnlockState`] %v", err)
+		}
+	}
+
 	err = executeCommand("tfmigrate", tfMigrateArgs...)
 
 	if err != nil {
 		return fmt.Errorf("[executeCommand `tfmigrate`] %v", err)
+	}
+
+	if planOrApply == "apply" {
+		err = sm.createPlanOnlyRefreshRun(ctx, workspaceID)
+		if err != nil {
+			return fmt.Errorf("[sm.createPlanOnlyRefreshRun`] %v", err)
+		}
 	}
 
 	return nil
@@ -78,7 +99,7 @@ func (sm *stateMigrator) MigrateWorkspace(w WorkspaceDirectory) error {
 
 // BuildTFMigrateArgs constructs a slice of strings for use within
 // a tfmigrate command
-func (sm *stateMigrator) BuildTFMigrateArgs() []string {
+func (sm *stateMigrator) BuildTFMigrateArgs() (string, []string) {
 	var tfMigrateCMD string
 
 	if sm.config.IsApply {
@@ -89,7 +110,7 @@ func (sm *stateMigrator) BuildTFMigrateArgs() []string {
 
 	tfMigrateArgs := []string{tfMigrateCMD, "--config=./dragondrop/tfmigrate/.tfmigrate.hcl"}
 
-	return tfMigrateArgs
+	return tfMigrateCMD, tfMigrateArgs
 }
 
 // executeCommand wraps os.exec.Command with capturing of std output and errors.

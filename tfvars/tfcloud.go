@@ -269,7 +269,14 @@ func (tfc *tfCloud) createWorkspaceToVarSetVars(
 ) (map[string]VariableMap, error) {
 	outputWorkspaceToVariable := map[string]VariableMap{}
 
-	for workspace, varSetIDs := range workspaceToVarSetIDs {
+	var workspaceNameList []string
+	for workspace := range workspaceToVarSetIDs {
+		workspaceNameList = append(workspaceNameList, workspace)
+	}
+	sort.Strings(workspaceNameList)
+
+	for _, workspace := range workspaceNameList {
+		varSetIDs := workspaceToVarSetIDs[workspace]
 		currentVarMap := VariableMap{}
 
 		for varSetID := range varSetIDs {
