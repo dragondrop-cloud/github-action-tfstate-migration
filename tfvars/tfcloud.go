@@ -270,7 +270,7 @@ func (tfc *tfCloud) createWorkspaceToVarSetVars(
 	outputWorkspaceToVariable := map[string]VariableMap{}
 
 	var workspaceNameList []string
-	for workspace, _ := range workspaceToVarSetIDs {
+	for workspace := range workspaceToVarSetIDs {
 		workspaceNameList = append(workspaceNameList, workspace)
 	}
 	sort.Strings(workspaceNameList)
