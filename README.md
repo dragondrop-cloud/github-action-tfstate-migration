@@ -2,7 +2,7 @@
 A GitHub Action for running dragondrop-built state migrations.
 
 ## Example Usage
-### Migrations with history stored in s3
+### Migrations for AWS with history stored in s3
 ```yaml
 name: infrastructure migration
 on: push
@@ -16,13 +16,15 @@ jobs:
       contents: "read"
       id-token: "write"
 
-    env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-
     steps:
       - name: Checkout branch
         uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: "arn:aws:iam::MY_PROJECT_ID:role/ROLE_FOR_TERRAFORM_PLAN"
+          aws-region: "MY_REGION"
 
       - name: Plan Migration of Remote State
         uses: "dragondrop-cloud/github-action-tfstate-migration@latest"
@@ -51,7 +53,7 @@ jobs:
           workspace-to-directories: "workspace_1:/my/relative/directory/1/,workspace_2:/my/relative/directory/2/"
 ```
 
-### Migrations with history stored in GCP
+### Migrations on Terraform for GCP with history stored in GCP Cloud Storage
 ```yaml
 name: infrastructure migration
 on: push
